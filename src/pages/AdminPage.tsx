@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   isAdminAuthenticated, adminLogin, adminLogout,
   setAdminPassword, getAdminPassword,
@@ -87,20 +87,44 @@ function AuthGate({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-// ─── Composants éditables ─────────────────────────────────────────────────────
-
-// Champ texte inline éditable
+// ─── Champ texte inline éditable (stable — ne se démonte pas) ─────────────────
+// On utilise une ref pour éviter que le champ perde le focus lors des re-renders du parent.
 function InlineEdit({
-  value, onChange, placeholder = '', multiline = false, className = '',
+  value,
+  onChange,
+  placeholder = '',
+  multiline = false,
+  className = '',
 }: {
-  value: string; onChange: (v: string) => void;
-  placeholder?: string; multiline?: boolean; className?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  className?: string;
 }) {
+  // Valeur locale contrôlée par la ref pour éviter les re-renders sauvages
+  const [local, setLocal] = useState(value);
+  const prevValueRef = useRef(value);
+
+  // Sync uniquement si la valeur externe change depuis l'extérieur (pas pendant la saisie)
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      prevValueRef.current = value;
+      setLocal(value);
+    }
+  }, [value]);
+
+  const handleChange = (v: string) => {
+    prevValueRef.current = v;
+    setLocal(v);
+    onChange(v);
+  };
+
   if (multiline) {
     return (
       <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
+        value={local}
+        onChange={e => handleChange(e.target.value)}
         placeholder={placeholder}
         rows={2}
         className={`w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-y ${className}`}
@@ -110,17 +134,18 @@ function InlineEdit({
   return (
     <input
       type="text"
-      value={value}
-      onChange={e => onChange(e.target.value)}
+      value={local}
+      onChange={e => handleChange(e.target.value)}
       placeholder={placeholder}
       className={`w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
     />
   );
 }
 
-// Sélecteur de postes (multi-select)
+// ─── Sélecteur de postes ──────────────────────────────────────────────────────
 function PostesSelector({
-  postes, onChange,
+  postes,
+  onChange,
 }: {
   postes: PosteType[] | undefined;
   onChange: (v: PosteType[] | undefined) => void;
@@ -132,6 +157,7 @@ function PostesSelector({
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Postes concernés</p>
       <div className="flex flex-wrap gap-1.5">
         <button
+          type="button"
           onClick={() => onChange(undefined)}
           className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${isAll ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border text-muted-foreground hover:border-primary/40'}`}
         >
@@ -141,6 +167,7 @@ function PostesSelector({
           const selected = postes?.includes(p);
           return (
             <button
+              type="button"
               key={p}
               onClick={() => {
                 if (isAll) {
@@ -161,18 +188,20 @@ function PostesSelector({
   );
 }
 
-// Carte d'une question notée
+// ─── Carte Question Notée ─────────────────────────────────────────────────────
+// Mémorisée pour éviter les re-renders inutiles
 function QuestionNoteCard({
   q, qIdx, total,
-  onChange, onDelete, onMove,
+  onChangeLabel, onChangePostes, onDelete, onMove,
 }: {
   q: QuestionNote; qIdx: number; total: number;
-  onChange: (updated: QuestionNote) => void;
-  onDelete: () => void;
-  onMove: (dir: 'up' | 'down') => void;
+  onChangeLabel: (id: string, v: string) => void;
+  onChangePostes: (id: string, v: PosteType[] | undefined) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, dir: 'up' | 'down') => void;
 }) {
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 group">
+    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
       <div className="flex items-start gap-2 mb-2">
         <GripVertical className="w-4 h-4 text-blue-300 mt-2.5 flex-shrink-0" />
         <div className="flex-1">
@@ -182,23 +211,23 @@ function QuestionNoteCard({
           </div>
           <InlineEdit
             value={q.label}
-            onChange={v => onChange({ ...q, label: v })}
+            onChange={v => onChangeLabel(q.id, v)}
             placeholder="Libellé de la question..."
             className="bg-white border-blue-200 focus:ring-blue-300"
           />
           <PostesSelector
             postes={q.postes}
-            onChange={v => onChange({ ...q, postes: v })}
+            onChange={v => onChangePostes(q.id, v)}
           />
         </div>
         <div className="flex flex-col gap-1 flex-shrink-0">
-          <button onClick={() => onMove('up')} disabled={qIdx === 0} className="p-1 rounded hover:bg-blue-100 disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(q.id, 'up')} disabled={qIdx === 0} className="p-1 rounded hover:bg-blue-100 disabled:opacity-30 transition-colors">
             <ChevronUp className="w-3.5 h-3.5 text-blue-600" />
           </button>
-          <button onClick={() => onMove('down')} disabled={qIdx === total - 1} className="p-1 rounded hover:bg-blue-100 disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(q.id, 'down')} disabled={qIdx === total - 1} className="p-1 rounded hover:bg-blue-100 disabled:opacity-30 transition-colors">
             <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
           </button>
-          <button onClick={onDelete} className="p-1 rounded hover:bg-red-100 transition-colors">
+          <button type="button" onClick={() => onDelete(q.id)} className="p-1 rounded hover:bg-red-100 transition-colors">
             <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
@@ -207,15 +236,16 @@ function QuestionNoteCard({
   );
 }
 
-// Carte d'une question ouverte
+// ─── Carte Question Ouverte ───────────────────────────────────────────────────
 function QuestionOuverteCard({
   q, qIdx, total,
-  onChange, onDelete, onMove,
+  onChangeLabel, onChangePlaceholder, onDelete, onMove,
 }: {
   q: QuestionOuverte; qIdx: number; total: number;
-  onChange: (updated: QuestionOuverte) => void;
-  onDelete: () => void;
-  onMove: (dir: 'up' | 'down') => void;
+  onChangeLabel: (id: string, v: string) => void;
+  onChangePlaceholder: (id: string, v: string) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, dir: 'up' | 'down') => void;
 }) {
   return (
     <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
@@ -228,26 +258,26 @@ function QuestionOuverteCard({
           </div>
           <InlineEdit
             value={q.label}
-            onChange={v => onChange({ ...q, label: v })}
+            onChange={v => onChangeLabel(q.id, v)}
             placeholder="Libellé de la question ouverte..."
             multiline
             className="bg-white border-violet-200 focus:ring-violet-300"
           />
           <InlineEdit
             value={q.placeholder}
-            onChange={v => onChange({ ...q, placeholder: v })}
+            onChange={v => onChangePlaceholder(q.id, v)}
             placeholder="Texte d'aide (placeholder)..."
             className="bg-white border-violet-100 text-xs text-muted-foreground focus:ring-violet-300"
           />
         </div>
         <div className="flex flex-col gap-1 flex-shrink-0">
-          <button onClick={() => onMove('up')} disabled={qIdx === 0} className="p-1 rounded hover:bg-violet-100 disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(q.id, 'up')} disabled={qIdx === 0} className="p-1 rounded hover:bg-violet-100 disabled:opacity-30 transition-colors">
             <ChevronUp className="w-3.5 h-3.5 text-violet-600" />
           </button>
-          <button onClick={() => onMove('down')} disabled={qIdx === total - 1} className="p-1 rounded hover:bg-violet-100 disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(q.id, 'down')} disabled={qIdx === total - 1} className="p-1 rounded hover:bg-violet-100 disabled:opacity-30 transition-colors">
             <ChevronDown className="w-3.5 h-3.5 text-violet-600" />
           </button>
-          <button onClick={onDelete} className="p-1 rounded hover:bg-red-100 transition-colors">
+          <button type="button" onClick={() => onDelete(q.id)} className="p-1 rounded hover:bg-red-100 transition-colors">
             <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
@@ -256,53 +286,30 @@ function QuestionOuverteCard({
   );
 }
 
-// Carte d'un domaine
+// ─── Carte Domaine ─────────────────────────────────────────────────────────────
 function DomaineCard({
   d, dIdx, totalDomaines,
-  onChange, onDelete, onMove,
+  onChangeTitre,
+  onNoteChangeLabel, onNoteChangePostes, onNoteDelete, onNoteMove, onNoteAdd,
+  onOuverteChangeLabel, onOuverteChangePlaceholder, onOuverteDelete, onOuverteMove, onOuverteAdd,
+  onDelete, onMove,
 }: {
   d: Domaine; dIdx: number; totalDomaines: number;
-  onChange: (updated: Domaine) => void;
-  onDelete: () => void;
-  onMove: (dir: 'up' | 'down') => void;
+  onChangeTitre: (id: string, v: string) => void;
+  onNoteChangeLabel: (domaineId: string, questionId: string, v: string) => void;
+  onNoteChangePostes: (domaineId: string, questionId: string, v: PosteType[] | undefined) => void;
+  onNoteDelete: (domaineId: string, questionId: string) => void;
+  onNoteMove: (domaineId: string, questionId: string, dir: 'up' | 'down') => void;
+  onNoteAdd: (domaineId: string) => void;
+  onOuverteChangeLabel: (domaineId: string, questionId: string, v: string) => void;
+  onOuverteChangePlaceholder: (domaineId: string, questionId: string, v: string) => void;
+  onOuverteDelete: (domaineId: string, questionId: string) => void;
+  onOuverteMove: (domaineId: string, questionId: string, dir: 'up' | 'down') => void;
+  onOuverteAdd: (domaineId: string) => void;
+  onDelete: (id: string) => void;
+  onMove: (id: string, dir: 'up' | 'down') => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-
-  const updateNoteQ = (qIdx: number, updated: QuestionNote) => {
-    const next = [...d.questionsNotes];
-    next[qIdx] = updated;
-    onChange({ ...d, questionsNotes: next });
-  };
-  const deleteNoteQ = (qIdx: number) => {
-    onChange({ ...d, questionsNotes: d.questionsNotes.filter((_, i) => i !== qIdx) });
-  };
-  const moveNoteQ = (qIdx: number, dir: 'up' | 'down') => {
-    const next = [...d.questionsNotes];
-    const target = dir === 'up' ? qIdx - 1 : qIdx + 1;
-    [next[qIdx], next[target]] = [next[target], next[qIdx]];
-    onChange({ ...d, questionsNotes: next });
-  };
-  const addNoteQ = () => {
-    onChange({ ...d, questionsNotes: [...d.questionsNotes, { id: genId('qn'), label: '', postes: undefined }] });
-  };
-
-  const updateOuverteQ = (qIdx: number, updated: QuestionOuverte) => {
-    const next = [...d.questionsOuvertes];
-    next[qIdx] = updated;
-    onChange({ ...d, questionsOuvertes: next });
-  };
-  const deleteOuverteQ = (qIdx: number) => {
-    onChange({ ...d, questionsOuvertes: d.questionsOuvertes.filter((_, i) => i !== qIdx) });
-  };
-  const moveOuverteQ = (qIdx: number, dir: 'up' | 'down') => {
-    const next = [...d.questionsOuvertes];
-    const target = dir === 'up' ? qIdx - 1 : qIdx + 1;
-    [next[qIdx], next[target]] = [next[target], next[qIdx]];
-    onChange({ ...d, questionsOuvertes: next });
-  };
-  const addOuverteQ = () => {
-    onChange({ ...d, questionsOuvertes: [...d.questionsOuvertes, { id: genId('qo'), label: '', placeholder: '' }] });
-  };
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -312,23 +319,23 @@ function DomaineCard({
         <div className="flex-1">
           <InlineEdit
             value={d.titre}
-            onChange={v => onChange({ ...d, titre: v })}
+            onChange={v => onChangeTitre(d.id, v)}
             placeholder="Titre du domaine..."
             className="font-semibold text-sm bg-transparent border-muted focus:bg-background"
           />
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <span className="text-[10px] text-muted-foreground">{d.questionsNotes.length + d.questionsOuvertes.length} question(s)</span>
-          <button onClick={() => onMove('up')} disabled={dIdx === 0} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(d.id, 'up')} disabled={dIdx === 0} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
             <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
-          <button onClick={() => onMove('down')} disabled={dIdx === totalDomaines - 1} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
+          <button type="button" onClick={() => onMove(d.id, 'down')} disabled={dIdx === totalDomaines - 1} className="p-1 rounded hover:bg-muted disabled:opacity-30 transition-colors">
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
-          <button onClick={() => setCollapsed(c => !c)} className="p-1 rounded hover:bg-muted transition-colors">
+          <button type="button" onClick={() => setCollapsed(c => !c)} className="p-1 rounded hover:bg-muted transition-colors">
             {collapsed ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
-          <button onClick={onDelete} className="p-1 rounded hover:bg-red-50 transition-colors ml-1">
+          <button type="button" onClick={() => onDelete(d.id)} className="p-1 rounded hover:bg-red-50 transition-colors ml-1">
             <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
@@ -342,7 +349,8 @@ function DomaineCard({
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Questions notées (1-4)</p>
               <button
-                onClick={addNoteQ}
+                type="button"
+                onClick={() => onNoteAdd(d.id)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" /> Ajouter
@@ -356,9 +364,10 @@ function DomaineCard({
                   <QuestionNoteCard
                     key={q.id}
                     q={q} qIdx={qi} total={d.questionsNotes.length}
-                    onChange={u => updateNoteQ(qi, u)}
-                    onDelete={() => deleteNoteQ(qi)}
-                    onMove={dir => moveNoteQ(qi, dir)}
+                    onChangeLabel={(qId, v) => onNoteChangeLabel(d.id, qId, v)}
+                    onChangePostes={(qId, v) => onNoteChangePostes(d.id, qId, v)}
+                    onDelete={(qId) => onNoteDelete(d.id, qId)}
+                    onMove={(qId, dir) => onNoteMove(d.id, qId, dir)}
                   />
                 ))}
               </div>
@@ -370,7 +379,8 @@ function DomaineCard({
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Questions ouvertes</p>
               <button
-                onClick={addOuverteQ}
+                type="button"
+                onClick={() => onOuverteAdd(d.id)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" /> Ajouter
@@ -384,9 +394,10 @@ function DomaineCard({
                   <QuestionOuverteCard
                     key={q.id}
                     q={q} qIdx={qi} total={d.questionsOuvertes.length}
-                    onChange={u => updateOuverteQ(qi, u)}
-                    onDelete={() => deleteOuverteQ(qi)}
-                    onMove={dir => moveOuverteQ(qi, dir)}
+                    onChangeLabel={(qId, v) => onOuverteChangeLabel(d.id, qId, v)}
+                    onChangePlaceholder={(qId, v) => onOuverteChangePlaceholder(d.id, qId, v)}
+                    onDelete={(qId) => onOuverteDelete(d.id, qId)}
+                    onMove={(qId, dir) => onOuverteMove(d.id, qId, dir)}
                   />
                 ))}
               </div>
@@ -394,110 +405,6 @@ function DomaineCard({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Éditeur d'un questionnaire
-function QuestionnaireEditor({
-  config, onChange,
-}: {
-  config: QuestionnaireConfig;
-  onChange: (updated: QuestionnaireConfig) => void;
-}) {
-  const LABEL_MAP: Record<QType, string> = { '1 mois': 'Bilan 1 mois', '3 mois': 'Bilan 3 mois', '6 mois': 'Bilan 6 mois' };
-  const COLOR_MAP: Record<QType, string> = { '1 mois': 'bg-blue-600', '3 mois': 'bg-indigo-600', '6 mois': 'bg-violet-600' };
-
-  const updateDomaine = (dIdx: number, updated: Domaine) => {
-    const next = [...config.domaines];
-    next[dIdx] = updated;
-    onChange({ ...config, domaines: next });
-  };
-  const deleteDomaine = (dIdx: number) => {
-    onChange({ ...config, domaines: config.domaines.filter((_, i) => i !== dIdx) });
-  };
-  const moveDomaine = (dIdx: number, dir: 'up' | 'down') => {
-    const next = [...config.domaines];
-    const target = dir === 'up' ? dIdx - 1 : dIdx + 1;
-    [next[dIdx], next[target]] = [next[target], next[dIdx]];
-    onChange({ ...config, domaines: next });
-  };
-  const addDomaine = () => {
-    onChange({
-      ...config,
-      domaines: [
-        ...config.domaines,
-        { id: genId('d'), titre: 'Nouveau domaine', questionsNotes: [], questionsOuvertes: [] },
-      ],
-    });
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Informations générales */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className={`flex items-center gap-3 px-5 py-4 ${COLOR_MAP[config.type]}`}>
-          <FileText className="w-5 h-5 text-white flex-shrink-0" />
-          <div>
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-widest">Questionnaire</p>
-            <p className="text-base font-bold text-white">{LABEL_MAP[config.type]}</p>
-          </div>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">Titre du questionnaire</label>
-            <InlineEdit
-              value={config.titre}
-              onChange={v => onChange({ ...config, titre: v })}
-              placeholder="Titre..."
-              className="font-semibold"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">Objectif</label>
-            <InlineEdit
-              value={config.objectif}
-              onChange={v => onChange({ ...config, objectif: v })}
-              placeholder="Objectif du questionnaire..."
-              multiline
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">Consignes de notation</label>
-            <InlineEdit
-              value={config.consignes}
-              onChange={v => onChange({ ...config, consignes: v })}
-              placeholder="Explication de l'échelle 1-4..."
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Domaines */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">
-            Domaines ({config.domaines.length})
-          </h3>
-          <button
-            onClick={addDomaine}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Ajouter un domaine
-          </button>
-        </div>
-        <div className="space-y-4">
-          {config.domaines.map((d, di) => (
-            <DomaineCard
-              key={d.id}
-              d={d} dIdx={di} totalDomaines={config.domaines.length}
-              onChange={u => updateDomaine(di, u)}
-              onDelete={() => deleteDomaine(di)}
-              onMove={dir => moveDomaine(di, dir)}
-            />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -556,11 +463,136 @@ function PwdSection() {
           </p>
         )}
         <button
+          type="button"
           onClick={handleSave}
           className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           Enregistrer le nouveau mot de passe
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Éditeur de questionnaire (props stables passées depuis AdminPage) ─────────
+function QuestionnaireEditor({
+  config,
+  onChangeTitre,
+  onChangeObjectif,
+  onChangeConsignes,
+  onDomaineTitreChange,
+  onNoteChangeLabel,
+  onNoteChangePostes,
+  onNoteDelete,
+  onNoteMove,
+  onNoteAdd,
+  onOuverteChangeLabel,
+  onOuverteChangePlaceholder,
+  onOuverteDelete,
+  onOuverteMove,
+  onOuverteAdd,
+  onDomaineDelete,
+  onDomaineMove,
+  onDomaineAdd,
+}: {
+  config: QuestionnaireConfig;
+  onChangeTitre: (v: string) => void;
+  onChangeObjectif: (v: string) => void;
+  onChangeConsignes: (v: string) => void;
+  onDomaineTitreChange: (domaineId: string, v: string) => void;
+  onNoteChangeLabel: (domaineId: string, questionId: string, v: string) => void;
+  onNoteChangePostes: (domaineId: string, questionId: string, v: PosteType[] | undefined) => void;
+  onNoteDelete: (domaineId: string, questionId: string) => void;
+  onNoteMove: (domaineId: string, questionId: string, dir: 'up' | 'down') => void;
+  onNoteAdd: (domaineId: string) => void;
+  onOuverteChangeLabel: (domaineId: string, questionId: string, v: string) => void;
+  onOuverteChangePlaceholder: (domaineId: string, questionId: string, v: string) => void;
+  onOuverteDelete: (domaineId: string, questionId: string) => void;
+  onOuverteMove: (domaineId: string, questionId: string, dir: 'up' | 'down') => void;
+  onOuverteAdd: (domaineId: string) => void;
+  onDomaineDelete: (domaineId: string) => void;
+  onDomaineMove: (domaineId: string, dir: 'up' | 'down') => void;
+  onDomaineAdd: () => void;
+}) {
+  const LABEL_MAP: Record<QType, string> = { '1 mois': 'Bilan 1 mois', '3 mois': 'Bilan 3 mois', '6 mois': 'Bilan 6 mois' };
+  const COLOR_MAP: Record<QType, string> = { '1 mois': 'bg-blue-600', '3 mois': 'bg-indigo-600', '6 mois': 'bg-violet-600' };
+
+  return (
+    <div className="space-y-5">
+      {/* Informations générales */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className={`flex items-center gap-3 px-5 py-4 ${COLOR_MAP[config.type]}`}>
+          <FileText className="w-5 h-5 text-white flex-shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-widest">Questionnaire</p>
+            <p className="text-base font-bold text-white">{LABEL_MAP[config.type]}</p>
+          </div>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Titre du questionnaire</label>
+            <InlineEdit
+              value={config.titre}
+              onChange={onChangeTitre}
+              placeholder="Titre..."
+              className="font-semibold"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Objectif</label>
+            <InlineEdit
+              value={config.objectif}
+              onChange={onChangeObjectif}
+              placeholder="Objectif du questionnaire..."
+              multiline
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Consignes de notation</label>
+            <InlineEdit
+              value={config.consignes}
+              onChange={onChangeConsignes}
+              placeholder="Explication de l'échelle 1-4..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Domaines */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">
+            Domaines ({config.domaines.length})
+          </h3>
+          <button
+            type="button"
+            onClick={onDomaineAdd}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Ajouter un domaine
+          </button>
+        </div>
+        <div className="space-y-4">
+          {config.domaines.map((d, di) => (
+            <DomaineCard
+              key={d.id}
+              d={d} dIdx={di} totalDomaines={config.domaines.length}
+              onChangeTitre={onDomaineTitreChange}
+              onNoteChangeLabel={onNoteChangeLabel}
+              onNoteChangePostes={onNoteChangePostes}
+              onNoteDelete={onNoteDelete}
+              onNoteMove={onNoteMove}
+              onNoteAdd={onNoteAdd}
+              onOuverteChangeLabel={onOuverteChangeLabel}
+              onOuverteChangePlaceholder={onOuverteChangePlaceholder}
+              onOuverteDelete={onOuverteDelete}
+              onOuverteMove={onOuverteMove}
+              onOuverteAdd={onOuverteAdd}
+              onDelete={onDomaineDelete}
+              onMove={onDomaineMove}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -611,9 +643,161 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => { adminLogout(); setAuthed(false); };
-  const updateConfig = (qType: QType, updated: QuestionnaireConfig) => {
-    setConfigs(prev => prev.map(c => c.type === qType ? updated : c));
-  };
+
+  // ── Helpers de mutation immutable par QType ────────────────────────────────
+  const mutateConfig = useCallback((qType: QType, fn: (c: QuestionnaireConfig) => QuestionnaireConfig) => {
+    setConfigs(prev => prev.map(c => c.type === qType ? fn(c) : c));
+  }, []);
+
+  // Titre / objectif / consignes
+  const onChangeTitre = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, titre: v })), [activeQ, mutateConfig]);
+  const onChangeObjectif = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, objectif: v })), [activeQ, mutateConfig]);
+  const onChangeConsignes = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, consignes: v })), [activeQ, mutateConfig]);
+
+  // Domaine
+  const onDomaineTitreChange = useCallback((domaineId: string, v: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id === domaineId ? { ...d, titre: v } : d),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onDomaineDelete = useCallback((domaineId: string) => {
+    mutateConfig(activeQ, c => ({ ...c, domaines: c.domaines.filter(d => d.id !== domaineId) }));
+  }, [activeQ, mutateConfig]);
+
+  const onDomaineMove = useCallback((domaineId: string, dir: 'up' | 'down') => {
+    mutateConfig(activeQ, c => {
+      const next = [...c.domaines];
+      const idx = next.findIndex(d => d.id === domaineId);
+      if (idx < 0) return c;
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= next.length) return c;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return { ...c, domaines: next };
+    });
+  }, [activeQ, mutateConfig]);
+
+  const onDomaineAdd = useCallback(() => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: [...c.domaines, { id: genId('d'), titre: 'Nouveau domaine', questionsNotes: [], questionsOuvertes: [] }],
+    }));
+  }, [activeQ, mutateConfig]);
+
+  // Questions notées
+  const onNoteChangeLabel = useCallback((domaineId: string, questionId: string, v: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsNotes: d.questionsNotes.map(q => q.id === questionId ? { ...q, label: v } : q),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onNoteChangePostes = useCallback((domaineId: string, questionId: string, v: PosteType[] | undefined) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsNotes: d.questionsNotes.map(q => q.id === questionId ? { ...q, postes: v } : q),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onNoteDelete = useCallback((domaineId: string, questionId: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsNotes: d.questionsNotes.filter(q => q.id !== questionId),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onNoteMove = useCallback((domaineId: string, questionId: string, dir: 'up' | 'down') => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => {
+        if (d.id !== domaineId) return d;
+        const next = [...d.questionsNotes];
+        const idx = next.findIndex(q => q.id === questionId);
+        if (idx < 0) return d;
+        const target = dir === 'up' ? idx - 1 : idx + 1;
+        if (target < 0 || target >= next.length) return d;
+        [next[idx], next[target]] = [next[target], next[idx]];
+        return { ...d, questionsNotes: next };
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onNoteAdd = useCallback((domaineId: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsNotes: [...d.questionsNotes, { id: genId('qn'), label: '', postes: undefined }],
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  // Questions ouvertes
+  const onOuverteChangeLabel = useCallback((domaineId: string, questionId: string, v: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsOuvertes: d.questionsOuvertes.map(q => q.id === questionId ? { ...q, label: v } : q),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onOuverteChangePlaceholder = useCallback((domaineId: string, questionId: string, v: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsOuvertes: d.questionsOuvertes.map(q => q.id === questionId ? { ...q, placeholder: v } : q),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onOuverteDelete = useCallback((domaineId: string, questionId: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsOuvertes: d.questionsOuvertes.filter(q => q.id !== questionId),
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onOuverteMove = useCallback((domaineId: string, questionId: string, dir: 'up' | 'down') => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => {
+        if (d.id !== domaineId) return d;
+        const next = [...d.questionsOuvertes];
+        const idx = next.findIndex(q => q.id === questionId);
+        if (idx < 0) return d;
+        const target = dir === 'up' ? idx - 1 : idx + 1;
+        if (target < 0 || target >= next.length) return d;
+        [next[idx], next[target]] = [next[target], next[idx]];
+        return { ...d, questionsOuvertes: next };
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
+
+  const onOuverteAdd = useCallback((domaineId: string) => {
+    mutateConfig(activeQ, c => ({
+      ...c,
+      domaines: c.domaines.map(d => d.id !== domaineId ? d : {
+        ...d,
+        questionsOuvertes: [...d.questionsOuvertes, { id: genId('qo'), label: '', placeholder: '' }],
+      }),
+    }));
+  }, [activeQ, mutateConfig]);
 
   if (!authed) return <AuthGate onLogin={() => setAuthed(true)} />;
   if (loadingConfig) return (
@@ -656,18 +840,21 @@ export default function AdminPage() {
             </motion.span>
           )}
           <button
+            type="button"
             onClick={() => setShowResetConfirm(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Réinitialiser
           </button>
           <button
+            type="button"
             onClick={handleSave}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
           >
             <Save className="w-3.5 h-3.5" /> Enregistrer les modifications
           </button>
           <button
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
@@ -680,7 +867,7 @@ export default function AdminPage() {
       {saveError && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-3 rounded-xl mb-4">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {saveError}
-          <button onClick={() => setSaveError('')} className="ml-auto font-bold">✕</button>
+          <button type="button" onClick={() => setSaveError('')} className="ml-auto font-bold">✕</button>
         </div>
       )}
 
@@ -711,12 +898,14 @@ export default function AdminPage() {
               </div>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setShowResetConfirm(false)}
                   className="flex-1 py-2.5 border border-border rounded-lg text-sm font-semibold text-foreground hover:bg-muted transition-colors"
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleReset}
                   className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
                 >
@@ -735,6 +924,7 @@ export default function AdminPage() {
           { id: 'parametres', label: 'Paramètres', icon: Settings },
         ] as { id: AdminTab; label: string; icon: React.ElementType }[]).map(t => (
           <button
+            type="button"
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
@@ -762,6 +952,7 @@ export default function AdminPage() {
               const isActive = activeQ === qt;
               return (
                 <button
+                  type="button"
                   key={qt}
                   onClick={() => setActiveQ(qt)}
                   className={`rounded-xl border-2 p-4 text-left transition-all duration-150 ${isActive ? activeColors[i] : colors[i] + ' hover:border-opacity-70'}`}
@@ -786,7 +977,23 @@ export default function AdminPage() {
           {currentConfig && (
             <QuestionnaireEditor
               config={currentConfig}
-              onChange={updated => updateConfig(activeQ, updated)}
+              onChangeTitre={onChangeTitre}
+              onChangeObjectif={onChangeObjectif}
+              onChangeConsignes={onChangeConsignes}
+              onDomaineTitreChange={onDomaineTitreChange}
+              onNoteChangeLabel={onNoteChangeLabel}
+              onNoteChangePostes={onNoteChangePostes}
+              onNoteDelete={onNoteDelete}
+              onNoteMove={onNoteMove}
+              onNoteAdd={onNoteAdd}
+              onOuverteChangeLabel={onOuverteChangeLabel}
+              onOuverteChangePlaceholder={onOuverteChangePlaceholder}
+              onOuverteDelete={onOuverteDelete}
+              onOuverteMove={onOuverteMove}
+              onOuverteAdd={onOuverteAdd}
+              onDomaineDelete={onDomaineDelete}
+              onDomaineMove={onDomaineMove}
+              onDomaineAdd={onDomaineAdd}
             />
           )}
         </div>
