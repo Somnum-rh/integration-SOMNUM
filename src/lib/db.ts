@@ -119,7 +119,10 @@ export async function exportCSVFromDb(): Promise<string> {
 
 // ─── CONFIG QUESTIONNAIRES ────────────────────────────────────────────────────
 
-/** Récupère la configuration personnalisée des questionnaires */
+/** Récupère la configuration personnalisée des questionnaires.
+ *  Si la config stockée contient les anciens types ('1 mois', '3 mois', '6 mois'),
+ *  elle est ignorée et remplacée par la config par défaut actuelle.
+ */
 export async function fetchConfig(): Promise<QuestionnaireConfig[]> {
   const { data, error } = await supabase
     .from('questionnaire_config')
@@ -129,7 +132,20 @@ export async function fetchConfig(): Promise<QuestionnaireConfig[]> {
 
   if (error) throw new Error(error.message);
   if (!data) return DEFAULT_QUESTIONNAIRES.map((q) => JSON.parse(JSON.stringify(q)));
-  return data.config as QuestionnaireConfig[];
+
+  // Vérifier que la config stockée utilise les bons types
+  const stored = data.config as QuestionnaireConfig[];
+  const VALID_TYPES = DEFAULT_QUESTIONNAIRES.map(q => q.type);
+  const isValid = Array.isArray(stored) &&
+    stored.length > 0 &&
+    stored.every(c => VALID_TYPES.includes(c.type as typeof VALID_TYPES[number]));
+
+  if (!isValid) {
+    // Config obsolète → on retourne la config par défaut (sans écraser Supabase pour ne pas bloquer)
+    return DEFAULT_QUESTIONNAIRES.map((q) => JSON.parse(JSON.stringify(q)));
+  }
+
+  return stored;
 }
 
 /** Sauvegarde la configuration personnalisée */

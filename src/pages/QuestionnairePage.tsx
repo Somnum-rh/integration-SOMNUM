@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { springPresets } from '@/lib/motion';
 import {
   CheckCircle2, ChevronRight, ChevronLeft, Send, AlertCircle,
-  User, Briefcase, Calendar, ClipboardList, Moon,
+  User, Briefcase, Calendar, ClipboardList,
 } from 'lucide-react';
 
 // ─── Stepper visuel ───────────────────────────────────────────────────────────
@@ -536,7 +536,12 @@ export default function QuestionnairePage() {
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
-    fetchConfig().then(setAllConfigs).catch(() => setAllConfigs([]));
+    fetchConfig()
+      .then(data => { if (data && data.length > 0) setAllConfigs(data); })
+      .catch(() => {
+        // Fallback sur les valeurs par défaut si Supabase échoue
+        import('@/lib/index').then(m => setAllConfigs(m.DEFAULT_QUESTIONNAIRES.map(q => JSON.parse(JSON.stringify(q)))));
+      });
   }, []);
 
   const config = useMemo(

@@ -813,7 +813,25 @@ export default function AdminPage() {
     </div>
   );
 
-  const currentConfig = configs.find(c => c.type === activeQ)!;
+  // Sécurité : si configs est vide ou activeQ ne matche rien, on force la valeur par défaut
+  if (configs.length === 0) return (
+    <div className="flex items-center justify-center py-24">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <AlertTriangle className="w-8 h-8 text-orange-500" />
+        <p className="text-sm text-foreground font-semibold">Configuration introuvable</p>
+        <p className="text-xs text-muted-foreground max-w-xs">La configuration n'a pas pu être chargée depuis Supabase.</p>
+        <button
+          type="button"
+          onClick={() => { setLoadingConfig(true); fetchConfig().then(setConfigs).catch(() => setConfigs(DEFAULT_QUESTIONNAIRES.map(q => JSON.parse(JSON.stringify(q))))).finally(() => setLoadingConfig(false)); }}
+          className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+        >
+          Réessayer
+        </button>
+      </div>
+    </div>
+  );
+
+  const currentConfig = configs.find(c => c.type === activeQ) ?? configs[0];
 
   return (
     <motion.div
