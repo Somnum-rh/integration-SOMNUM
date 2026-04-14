@@ -1,6 +1,5 @@
 /**
  * db.ts — Toutes les opérations Supabase pour l'application.
- * Remplace complètement les fonctions localStorage de lib/index.ts.
  */
 import { supabase } from './supabase';
 import { DEFAULT_QUESTIONNAIRES, type QuestionnaireConfig, type Reponse } from './index';
@@ -31,32 +30,48 @@ export async function fetchReponses(): Promise<Reponse[]> {
   }));
 }
 
-/** Enregistre une nouvelle réponse dans Supabase */
+/** Enregistre une nouvelle réponse dans Supabase.
+ *  Tente d'abord avec nom/prénom. Si la colonne n'existe pas encore,
+ *  retente sans pour ne pas bloquer la soumission.
+ */
 export async function insertReponse(
   r: Omit<Reponse, 'id' | 'createdAt'>
 ): Promise<Reponse> {
-  const { data, error } = await supabase
+  // Tentative principale avec nom + prenom
+  const payload: Record<string, unknown> = {
+    poste: r.poste,
+    questionnaire: r.questionnaire,
+    date_prise_de_fonction: r.datePriseDeFonction || null,
+    date_completion: r.dateCompletion || null,
+    referent: r.referent || null,
+    notes: r.notes,
+    ouvertes: r.ouvertes,
+    nom: r.nom || null,
+    prenom: r.prenom || null,
+  };
+
+  let { data, error } = await supabase
     .from('reponses')
-    .insert({
-      nom: r.nom || null,
-      prenom: r.prenom || null,
-      poste: r.poste,
-      questionnaire: r.questionnaire,
-      date_prise_de_fonction: r.datePriseDeFonction || null,
-      date_completion: r.dateCompletion || null,
-      referent: r.referent || null,
-      notes: r.notes,
-      ouvertes: r.ouvertes,
-    })
+    .insert(payload)
     .select()
     .single();
+
+  // Fallback : si la colonne nom/prenom n'existe pas encore, on réessaie sans
+  if (error && (error.message.includes('nom') || error.message.includes('prenom') || error.code === '42703')) {
+    const fallback: Record<string, unknown> = { ...payload };
+    delete fallback.nom;
+    delete fallback.prenom;
+    const res2 = await supabase.from('reponses').insert(fallback).select().single();
+    data = res2.data;
+    error = res2.error;
+  }
 
   if (error) throw new Error(error.message);
 
   return {
     id: data.id,
-    nom: data.nom ?? '',
-    prenom: data.prenom ?? '',
+    nom: data.nom ?? r.nom ?? '',
+    prenom: data.prenom ?? r.prenom ?? '',
     poste: data.poste,
     questionnaire: data.questionnaire,
     datePriseDeFonction: data.date_prise_de_fonction ?? '',
