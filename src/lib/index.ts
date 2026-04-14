@@ -3,6 +3,7 @@ export const ROUTE_PATHS = {
   HOME: '/',
   QUESTIONNAIRE: '/questionnaire',
   DASHBOARD: '/dashboard',
+  ADMIN: '/admin',
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,7 +19,7 @@ export type QType = '1 mois' | '3 mois' | '6 mois';
 export interface QuestionNote {
   id: string;
   label: string;
-  postes?: PosteType[]; // undefined = tous les postes
+  postes?: PosteType[];
 }
 
 export interface QuestionOuverte {
@@ -28,6 +29,7 @@ export interface QuestionOuverte {
 }
 
 export interface Domaine {
+  id: string;
   titre: string;
   questionsNotes: QuestionNote[];
   questionsOuvertes: QuestionOuverte[];
@@ -43,7 +45,7 @@ export interface QuestionnaireConfig {
 
 export interface ReponseNote {
   questionId: string;
-  valeur: number; // 1-4
+  valeur: number;
 }
 
 export interface ReponseOuverte {
@@ -63,7 +65,7 @@ export interface Reponse {
   createdAt: string;
 }
 
-// ─── Config Questionnaires ────────────────────────────────────────────────────
+// ─── Constantes ───────────────────────────────────────────────────────────────
 export const POSTES: PosteType[] = [
   'Médecin',
   'Infirmier(e)',
@@ -72,7 +74,16 @@ export const POSTES: PosteType[] = [
   'Secrétaire médicale',
 ];
 
-export const QUESTIONNAIRES: QuestionnaireConfig[] = [
+export const ALL_POSTES_OPTIONS: PosteType[] = [
+  'Médecin',
+  'Infirmier(e)',
+  'Technicien du sommeil',
+  'Assistante médicale',
+  'Secrétaire médicale',
+];
+
+// ─── Config par défaut ────────────────────────────────────────────────────────
+export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
   {
     type: '1 mois',
     titre: 'Bilan d\'intégration à 1 mois',
@@ -80,6 +91,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
     consignes: '1 = Pas du tout satisfait(e) · 2 = Peu satisfait(e) · 3 = Satisfait(e) · 4 = Très satisfait(e)',
     domaines: [
       {
+        id: 'd1_1',
         titre: 'Accueil & prise de poste',
         questionsNotes: [
           { id: 'q1_n1', label: 'Qualité de l\'accueil le premier jour (présentation locaux, équipes, procédures)' },
@@ -91,6 +103,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd1_2',
         titre: 'Environnement de travail',
         questionsNotes: [
           { id: 'q1_n4', label: 'Confort dans les locaux du cabinet (ergonomie, espace, ambiance)' },
@@ -100,6 +113,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         questionsOuvertes: [],
       },
       {
+        id: 'd1_3',
         titre: 'Prise en main métier',
         questionsNotes: [
           { id: 'q1_n7', label: 'Missions et responsabilités clairement expliquées' },
@@ -111,6 +125,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd1_4',
         titre: 'Relations au sein de l\'équipe',
         questionsNotes: [
           { id: 'q1_n10', label: 'Disponibilité et soutien de votre tuteur / référent' },
@@ -120,13 +135,14 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         questionsOuvertes: [],
       },
       {
+        id: 'd1_5',
         titre: 'Ressenti global',
         questionsNotes: [
           { id: 'q1_n13', label: 'Satisfaction globale à l\'issue de ce premier mois d\'intégration' },
         ],
         questionsOuvertes: [
           { id: 'q1_o3', label: 'Quels points positifs souhaitez-vous souligner concernant votre intégration ?', placeholder: 'Ce qui s\'est bien passé, ce qui vous a aidé...' },
-          { id: 'q1_o4', label: 'Quelles actions concrètes souhaiteriez-vous que le cabinet mette en place pour améliorer votre intégration ?', placeholder: 'Propositions, besoins spécifiques, souhaits d\'accompagnement...' },
+          { id: 'q1_o4', label: 'Quelles actions concrètes souhaiteriez-vous que le cabinet mette en place ?', placeholder: 'Propositions, besoins spécifiques, souhaits d\'accompagnement...' },
           { id: 'q1_o5', label: 'Avez-vous d\'autres remarques ou suggestions ?', placeholder: 'Remarques libres...' },
         ],
       },
@@ -139,6 +155,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
     consignes: '1 = Pas du tout / Non acquis · 2 = Partiellement · 3 = Satisfait / Acquis · 4 = Très satisfait / Totalement acquis',
     domaines: [
       {
+        id: 'd2_1',
         titre: 'Montée en autonomie',
         questionsNotes: [
           { id: 'q2_n1', label: 'Niveau d\'autonomie dans la réalisation de vos missions quotidiennes' },
@@ -151,6 +168,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd2_2',
         titre: 'Formation & accompagnement',
         questionsNotes: [
           { id: 'q2_n5', label: 'La formation / accompagnement reçu répond à vos besoins professionnels' },
@@ -161,6 +179,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd2_3',
         titre: 'Organisation & outils',
         questionsNotes: [
           { id: 'q2_n7', label: 'Organisation du travail (plannings, répartition des tâches, gestion des urgences)' },
@@ -171,6 +190,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd2_4',
         titre: 'Collaboration & communication',
         questionsNotes: [
           { id: 'q2_n9', label: 'Communication au sein de l\'équipe (informations, réunions, échanges)' },
@@ -180,6 +200,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         questionsOuvertes: [],
       },
       {
+        id: 'd2_5',
         titre: 'Bilan & perspectives',
         questionsNotes: [
           { id: 'q2_n12', label: 'Satisfaction globale à 3 mois d\'intégration' },
@@ -199,6 +220,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
     consignes: '1 = Non atteint / Insatisfaisant · 2 = Partiellement · 3 = Atteint / Satisfaisant · 4 = Dépassé / Excellent',
     domaines: [
       {
+        id: 'd3_1',
         titre: 'Intégration globale',
         questionsNotes: [
           { id: 'q3_n1', label: 'Sentiment de pleine intégration au sein de l\'équipe' },
@@ -210,6 +232,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd3_2',
         titre: 'Maîtrise des compétences clés',
         questionsNotes: [
           { id: 'q3_n4', label: 'Niveau de maîtrise des compétences cliniques attendues (consultations, interprétation PSG...)', postes: ['Médecin', 'Infirmier(e)', 'Technicien du sommeil'] },
@@ -221,6 +244,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd3_3',
         titre: 'Satisfaction & bien-être',
         questionsNotes: [
           { id: 'q3_n7', label: 'Niveau de bien-être et d\'épanouissement professionnel au cabinet' },
@@ -232,6 +256,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd3_4',
         titre: 'Perspectives & développement',
         questionsNotes: [
           { id: 'q3_n10', label: 'Perspectives d\'évolution au cabinet répondent aux aspirations professionnelles' },
@@ -242,6 +267,7 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
         ],
       },
       {
+        id: 'd3_5',
         titre: 'Bilan final',
         questionsNotes: [
           { id: 'q3_n12', label: 'Satisfaction globale après 6 mois au sein du cabinet' },
@@ -255,7 +281,61 @@ export const QUESTIONNAIRES: QuestionnaireConfig[] = [
   },
 ];
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
+// ─── Storage config questionnaires ───────────────────────────────────────────
+const CONFIG_STORAGE_KEY = 'cabinet_sommeil_config';
+
+export function getQuestionnaires(): QuestionnaireConfig[] {
+  try {
+    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    if (!raw) return DEFAULT_QUESTIONNAIRES.map(q => ({ ...q }));
+    return JSON.parse(raw) as QuestionnaireConfig[];
+  } catch {
+    return DEFAULT_QUESTIONNAIRES.map(q => ({ ...q }));
+  }
+}
+
+export function saveQuestionnaires(configs: QuestionnaireConfig[]): void {
+  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(configs));
+}
+
+export function resetQuestionnaires(): void {
+  localStorage.removeItem(CONFIG_STORAGE_KEY);
+}
+
+// ─── Admin auth ───────────────────────────────────────────────────────────────
+const ADMIN_KEY = 'cabinet_sommeil_admin_auth';
+const DEFAULT_PASSWORD = 'admin1234';
+
+export function getAdminPassword(): string {
+  return localStorage.getItem('cabinet_sommeil_admin_pwd') || DEFAULT_PASSWORD;
+}
+
+export function setAdminPassword(pwd: string): void {
+  localStorage.setItem('cabinet_sommeil_admin_pwd', pwd);
+}
+
+export function isAdminAuthenticated(): boolean {
+  return localStorage.getItem(ADMIN_KEY) === 'true';
+}
+
+export function adminLogin(password: string): boolean {
+  if (password === getAdminPassword()) {
+    localStorage.setItem(ADMIN_KEY, 'true');
+    return true;
+  }
+  return false;
+}
+
+export function adminLogout(): void {
+  localStorage.removeItem(ADMIN_KEY);
+}
+
+// ─── ID generator ─────────────────────────────────────────────────────────────
+export function genId(prefix = 'id'): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// ─── Storage réponses ─────────────────────────────────────────────────────────
 const STORAGE_KEY = 'cabinet_sommeil_reponses';
 
 export function getReponses(): Reponse[] {
@@ -287,18 +367,15 @@ export function deleteReponse(id: string): void {
 export function exportCSV(): string {
   const reponses = getReponses();
   if (reponses.length === 0) return '';
-
-  // Collect all note question IDs across all questionnaires
-  const allNoteIds = QUESTIONNAIRES.flatMap((q) =>
+  const configs = getQuestionnaires();
+  const allNoteIds = configs.flatMap((q) =>
     q.domaines.flatMap((d) => d.questionsNotes.map((n) => n.id))
   );
-
   const header = [
     'ID', 'Poste', 'Questionnaire', 'Date prise de fonction', 'Date complétion', 'Référent',
     ...allNoteIds,
     'Créé le',
   ].join(';');
-
   const rows = reponses.map((r) => {
     const noteMap = Object.fromEntries(r.notes.map((n) => [n.questionId, n.valeur]));
     return [
@@ -307,35 +384,10 @@ export function exportCSV(): string {
       r.createdAt,
     ].join(';');
   });
-
   return [header, ...rows].join('\n');
 }
 
 // ─── Stat helpers ─────────────────────────────────────────────────────────────
-export function computeStats(reponses: Reponse[]) {
-  const byPoste: Record<string, { qType: QType; notes: number[] }[]> = {};
-
-  POSTES.forEach((p) => {
-    byPoste[p] = [];
-  });
-
-  reponses.forEach((r) => {
-    const avg =
-      r.notes.length > 0
-        ? r.notes.reduce((s, n) => s + n.valeur, 0) / r.notes.length
-        : 0;
-    if (!byPoste[r.poste]) byPoste[r.poste] = [];
-    const existing = byPoste[r.poste].find((x) => x.qType === r.questionnaire);
-    if (existing) {
-      existing.notes.push(avg);
-    } else {
-      byPoste[r.poste].push({ qType: r.questionnaire, notes: [avg] });
-    }
-  });
-
-  return byPoste;
-}
-
 export function moyenne(vals: number[]): number | null {
   if (vals.length === 0) return null;
   return Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100) / 100;

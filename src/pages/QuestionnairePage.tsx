@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  QUESTIONNAIRES,
+  getQuestionnaires,
   POSTES,
   saveReponse,
   type PosteType,
@@ -434,7 +434,7 @@ export default function QuestionnairePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const config = useMemo(
-    () => QUESTIONNAIRES.find((q) => q.type === qType) ?? null,
+    () => getQuestionnaires().find((q) => q.type === qType) ?? null,
     [qType]
   );
 

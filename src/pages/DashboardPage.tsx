@@ -3,7 +3,7 @@ import {
   getReponses,
   deleteReponse,
   exportCSV,
-  QUESTIONNAIRES,
+  getQuestionnaires,
   POSTES,
   moyenne,
   niveauLabel,
@@ -239,7 +239,7 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
   const [selectedQ, setSelectedQ] = useState<QType>('1 mois');
   const [selectedPoste, setSelectedPoste] = useState<PosteType | 'Tous'>('Tous');
 
-  const config = QUESTIONNAIRES.find((q) => q.type === selectedQ)!;
+  const config = getQuestionnaires().find((q: { type: QType }) => q.type === selectedQ)!;
 
   const filteredReponses = reponses.filter(
     (r) =>
@@ -248,10 +248,10 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
   );
 
   // Compute stats per question
-  const questionStats = config.domaines.flatMap((d) =>
+  const questionStats = config.domaines.flatMap((d: { titre: string; questionsNotes: Array<{ id: string; label: string; postes?: PosteType[] }> }) =>
     d.questionsNotes
-      .filter((q) => !q.postes || selectedPoste === 'Tous' || q.postes.includes(selectedPoste as PosteType))
-      .map((q) => {
+      .filter((q: { postes?: PosteType[] }) => !q.postes || selectedPoste === 'Tous' || q.postes.includes(selectedPoste as PosteType))
+      .map((q: { id: string; label: string; postes?: PosteType[] }) => {
         const vals = filteredReponses
           .map((r) => r.notes.find((n) => n.questionId === q.id)?.valeur)
           .filter((v): v is number => v !== undefined);
@@ -275,10 +275,10 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
   );
 
   // Radar data
-  const radarData = config.domaines.map((d) => {
+  const radarData = config.domaines.map((d: { titre: string; questionsNotes: Array<{ id: string; label: string; postes?: PosteType[] }> }) => {
     const allVals = d.questionsNotes
-      .filter((q) => !q.postes || selectedPoste === 'Tous' || q.postes.includes(selectedPoste as PosteType))
-      .flatMap((q) =>
+      .filter((q: { postes?: PosteType[] }) => !q.postes || selectedPoste === 'Tous' || q.postes.includes(selectedPoste as PosteType))
+      .flatMap((q: { id: string }) =>
         filteredReponses
           .map((r) => r.notes.find((n) => n.questionId === q.id)?.valeur)
           .filter((v): v is number => v !== undefined)
@@ -366,7 +366,7 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
           <div className="bg-card border border-border rounded-xl p-5">
             <h3 className="text-sm font-semibold text-foreground mb-4">Moyenne par domaine</h3>
             <div className="space-y-3">
-              {radarData.map((d, i) => (
+              {radarData.map((d: { domaine: string; moyenne: number }, i: number) => (
                 <div key={i}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-foreground font-medium truncate max-w-[180px]">{d.domaine}</span>
@@ -395,7 +395,7 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
             <h3 className="text-sm font-semibold text-foreground">Détail par question</h3>
           </div>
           <div className="divide-y divide-border">
-            {questionStats.map((qs) => (
+            {questionStats.map((qs: { id: string; label: string; avg: number | null; n: number; dist: Array<{ note: number; pct: number }> }) => (
               <div key={qs.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p className="text-xs text-foreground font-medium leading-relaxed">{qs.label}</p>
@@ -406,7 +406,7 @@ function TabQuestions({ reponses }: { reponses: Reponse[] }) {
                 </div>
                 {qs.n > 0 && (
                   <div className="flex gap-1">
-                    {qs.dist.map((d) => (
+                    {qs.dist.map((d: { note: number; pct: number }) => (
                       <div key={d.note} className="flex-1 text-center">
                         <div
                           className="h-1.5 rounded-full mb-1"

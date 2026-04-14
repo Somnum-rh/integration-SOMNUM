@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ROUTE_PATHS } from '@/lib/index';
 import {
-  ClipboardList,
-  BarChart2,
-  Menu,
-  X,
-  Moon,
-  Home,
+  ClipboardList, BarChart2, Menu, X, Moon, Home, Settings,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -22,36 +17,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-sidebar fixed top-0 left-0 h-screen z-20">
         <SidebarContent currentPath={location.pathname} />
       </aside>
 
-      {/* Overlay mobile */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/30 z-30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar mobile */}
-      <aside
-        className={`fixed top-0 left-0 h-screen w-64 bg-sidebar border-r border-border z-40 transition-transform duration-300 md:hidden ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+      <aside className={`fixed top-0 left-0 h-screen w-64 bg-sidebar border-r border-border z-40 transition-transform duration-300 md:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <SidebarContent currentPath={location.pathname} onClose={() => setSidebarOpen(false)} />
       </aside>
 
-      {/* Main */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-        {/* Topbar mobile */}
         <header className="md:hidden sticky top-0 z-20 bg-background border-b border-border flex items-center gap-3 px-4 py-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors"
-          >
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-md hover:bg-muted transition-colors">
             <Menu className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex items-center gap-2">
@@ -59,23 +39,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="font-semibold text-sm text-foreground">Sommeil — Suivi Intégration</span>
           </div>
         </header>
-
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
     </div>
   );
 }
 
-function SidebarContent({
-  currentPath,
-  onClose,
-}: {
-  currentPath: string;
-  onClose?: () => void;
-}) {
+function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose?: () => void }) {
   return (
     <>
-      {/* Header sidebar */}
       <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
@@ -93,7 +65,6 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const isActive = currentPath === path;
@@ -115,7 +86,23 @@ function SidebarContent({
         })}
       </nav>
 
-      {/* Footer sidebar */}
+      {/* Séparateur + lien Admin */}
+      <div className="px-3 pb-3">
+        <div className="h-px bg-border mb-3" />
+        <NavLink
+          to={ROUTE_PATHS.ADMIN}
+          onClick={onClose}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+            currentPath === ROUTE_PATHS.ADMIN
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+          }`}
+        >
+          <Settings className="w-4 h-4 flex-shrink-0" />
+          Espace Admin
+        </NavLink>
+      </div>
+
       <div className="px-5 py-4 border-t border-border">
         <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
           Cabinet de Médecine du Sommeil<br />
