@@ -644,30 +644,34 @@ export default function AdminPage() {
 
   const handleLogout = () => { adminLogout(); setAuthed(false); };
 
-  // ── Helpers de mutation immutable par QType ────────────────────────────────
-  const mutateConfig = useCallback((qType: QType, fn: (c: QuestionnaireConfig) => QuestionnaireConfig) => {
-    setConfigs(prev => prev.map(c => c.type === qType ? fn(c) : c));
+  // ── activeQRef : permet aux callbacks de lire activeQ sans en dépendre ──────
+  const activeQRef = useRef<QType>(activeQ);
+  useEffect(() => { activeQRef.current = activeQ; }, [activeQ]);
+
+  // ── Mutation centrale — TOUJOURS stable (pas de dépendances variables) ───────
+  const mutateConfig = useCallback((fn: (c: QuestionnaireConfig) => QuestionnaireConfig) => {
+    setConfigs(prev => prev.map(c => c.type === activeQRef.current ? fn(c) : c));
   }, []);
 
   // Titre / objectif / consignes
-  const onChangeTitre = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, titre: v })), [activeQ, mutateConfig]);
-  const onChangeObjectif = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, objectif: v })), [activeQ, mutateConfig]);
-  const onChangeConsignes = useCallback((v: string) => mutateConfig(activeQ, c => ({ ...c, consignes: v })), [activeQ, mutateConfig]);
+  const onChangeTitre      = useCallback((v: string) => mutateConfig(c => ({ ...c, titre: v })), [mutateConfig]);
+  const onChangeObjectif   = useCallback((v: string) => mutateConfig(c => ({ ...c, objectif: v })), [mutateConfig]);
+  const onChangeConsignes  = useCallback((v: string) => mutateConfig(c => ({ ...c, consignes: v })), [mutateConfig]);
 
   // Domaine
   const onDomaineTitreChange = useCallback((domaineId: string, v: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id === domaineId ? { ...d, titre: v } : d),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onDomaineDelete = useCallback((domaineId: string) => {
-    mutateConfig(activeQ, c => ({ ...c, domaines: c.domaines.filter(d => d.id !== domaineId) }));
-  }, [activeQ, mutateConfig]);
+    mutateConfig(c => ({ ...c, domaines: c.domaines.filter(d => d.id !== domaineId) }));
+  }, [mutateConfig]);
 
   const onDomaineMove = useCallback((domaineId: string, dir: 'up' | 'down') => {
-    mutateConfig(activeQ, c => {
+    mutateConfig(c => {
       const next = [...c.domaines];
       const idx = next.findIndex(d => d.id === domaineId);
       if (idx < 0) return c;
@@ -676,48 +680,48 @@ export default function AdminPage() {
       [next[idx], next[target]] = [next[target], next[idx]];
       return { ...c, domaines: next };
     });
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onDomaineAdd = useCallback(() => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: [...c.domaines, { id: genId('d'), titre: 'Nouveau domaine', questionsNotes: [], questionsOuvertes: [] }],
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   // Questions notées
   const onNoteChangeLabel = useCallback((domaineId: string, questionId: string, v: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsNotes: d.questionsNotes.map(q => q.id === questionId ? { ...q, label: v } : q),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onNoteChangePostes = useCallback((domaineId: string, questionId: string, v: PosteType[] | undefined) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsNotes: d.questionsNotes.map(q => q.id === questionId ? { ...q, postes: v } : q),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onNoteDelete = useCallback((domaineId: string, questionId: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsNotes: d.questionsNotes.filter(q => q.id !== questionId),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onNoteMove = useCallback((domaineId: string, questionId: string, dir: 'up' | 'down') => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => {
         if (d.id !== domaineId) return d;
@@ -730,51 +734,51 @@ export default function AdminPage() {
         return { ...d, questionsNotes: next };
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onNoteAdd = useCallback((domaineId: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsNotes: [...d.questionsNotes, { id: genId('qn'), label: '', postes: undefined }],
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   // Questions ouvertes
   const onOuverteChangeLabel = useCallback((domaineId: string, questionId: string, v: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsOuvertes: d.questionsOuvertes.map(q => q.id === questionId ? { ...q, label: v } : q),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onOuverteChangePlaceholder = useCallback((domaineId: string, questionId: string, v: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsOuvertes: d.questionsOuvertes.map(q => q.id === questionId ? { ...q, placeholder: v } : q),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onOuverteDelete = useCallback((domaineId: string, questionId: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsOuvertes: d.questionsOuvertes.filter(q => q.id !== questionId),
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onOuverteMove = useCallback((domaineId: string, questionId: string, dir: 'up' | 'down') => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => {
         if (d.id !== domaineId) return d;
@@ -787,17 +791,17 @@ export default function AdminPage() {
         return { ...d, questionsOuvertes: next };
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   const onOuverteAdd = useCallback((domaineId: string) => {
-    mutateConfig(activeQ, c => ({
+    mutateConfig(c => ({
       ...c,
       domaines: c.domaines.map(d => d.id !== domaineId ? d : {
         ...d,
         questionsOuvertes: [...d.questionsOuvertes, { id: genId('qo'), label: '', placeholder: '' }],
       }),
     }));
-  }, [activeQ, mutateConfig]);
+  }, [mutateConfig]);
 
   if (!authed) return <AuthGate onLogin={() => setAuthed(true)} />;
   if (loadingConfig) return (

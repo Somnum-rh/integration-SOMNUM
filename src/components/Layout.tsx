@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ROUTE_PATHS } from '@/lib/index';
-import { ClipboardList, Menu, X, Moon, Home, Settings } from 'lucide-react';
+import { ClipboardList, Menu, X, Settings, type LucideIcon } from 'lucide-react';
+import SomNumLogo from '@/components/SomNumLogo';
 
-// Dashboard est accessible uniquement depuis l'admin — retiré du nav public
-const NAV_ITEMS = [
-  { path: ROUTE_PATHS.HOME, label: 'Accueil', icon: Home },
+const NAV_ITEMS: { path: string; label: string; icon: LucideIcon | null }[] = [
+  { path: ROUTE_PATHS.HOME, label: 'Accueil', icon: null },
   { path: ROUTE_PATHS.QUESTIONNAIRE, label: 'Remplir un questionnaire', icon: ClipboardList },
 ];
 
@@ -28,14 +28,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-        <header className="md:hidden sticky top-0 z-20 bg-background border-b border-border flex items-center gap-3 px-4 py-3">
+        {/* Header mobile */}
+        <header className="md:hidden sticky top-0 z-20 bg-background border-b border-border flex items-center gap-3 px-4 py-2">
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-md hover:bg-muted transition-colors">
             <Menu className="w-5 h-5 text-foreground" />
           </button>
-          <div className="flex items-center gap-2">
-            <Moon className="w-5 h-5 text-primary" />
-            <span className="font-semibold text-sm text-foreground">Sommeil — Suivi Intégration</span>
-          </div>
+          <SomNumLogo height={36} />
         </header>
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </div>
@@ -47,16 +45,8 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
   return (
     <>
       {/* Logo */}
-      <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-            <Moon className="w-4.5 h-4.5 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-foreground leading-tight">Médecine du Sommeil</p>
-            <p className="text-[10px] text-muted-foreground leading-tight">Suivi Post-Intégration</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <SomNumLogo height={44} />
         {onClose && (
           <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors md:hidden">
             <X className="w-4 h-4 text-muted-foreground" />
@@ -79,14 +69,19 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+              {!Icon && (
+                <span className={`w-4 h-4 flex-shrink-0 flex items-center justify-center`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-primary-foreground' : 'bg-muted-foreground'}`} />
+                </span>
+              )}
               {label}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Section admin séparée */}
+      {/* Section admin */}
       <div className="px-3 pb-4">
         <div className="h-px bg-border mb-3" />
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Administration</p>
