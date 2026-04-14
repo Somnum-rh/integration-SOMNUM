@@ -14,7 +14,8 @@ import { springPresets } from '@/lib/motion';
 import {
   Lock, LogOut, Save, RotateCcw, Plus, Trash2, ChevronUp, ChevronDown,
   Eye, EyeOff, Shield, Edit3, CheckCircle2, X, GripVertical, Settings,
-  FileText, ClipboardList, AlertTriangle, KeyRound, BarChart2, Download, RefreshCw, Users, Loader2,
+  FileText, ClipboardList, AlertTriangle, KeyRound, BarChart2, Download, RefreshCw,
+  Users, Loader2, ChevronRight, MessageSquare, Star,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -621,13 +622,156 @@ function NiveauBadge({ avg }: { avg: number | null }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${bg}`} style={{ color }}>{label}{avg !== null ? ` (${avg.toFixed(2)})` : ''}</span>;
 }
 
+// ─── Panneau de détail d'une réponse ─────────────────────────────────────────
+function noteColor(v: number) {
+  if (v >= 4) return 'bg-green-500';
+  if (v >= 3) return 'bg-blue-500';
+  if (v >= 2) return 'bg-orange-400';
+  return 'bg-red-500';
+}
+function noteLabel(v: number) {
+  if (v >= 4) return 'Très satisfait(e)';
+  if (v >= 3) return 'Satisfait(e)';
+  if (v >= 2) return 'Peu satisfait(e)';
+  return 'Pas satisfait(e)';
+}
+
+function DetailPanel({
+  reponse,
+  configs,
+  onClose,
+}: {
+  reponse: Reponse;
+  configs: QuestionnaireConfig[];
+  onClose: () => void;
+}) {
+  const cfg = configs.find(c => c.type === reponse.questionnaire) ?? DEFAULT_QUESTIONNAIRES.find(c => c.type === reponse.questionnaire);
+  const avg = moyenne(reponse.notes.map(n => n.valeur));
+  const init = `${(reponse.prenom || '?').charAt(0).toUpperCase()}${(reponse.nom || '?').charAt(0).toUpperCase()}`;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/40 z-50 flex justify-end"
+        onClick={onClose}
+      >
+        <motion.aside
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 38 }}
+          className="w-full max-w-lg h-full bg-background shadow-2xl overflow-y-auto flex flex-col"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* En-tête */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-primary">{init}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-bold text-foreground truncate">{reponse.prenom} {(reponse.nom || '').toUpperCase()}</h2>
+              <p className="text-xs text-muted-foreground">{reponse.poste} · {reponse.questionnaire} · {reponse.dateCompletion || '—'}</p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {avg !== null && (
+                <div className="text-right">
+                  <p className="text-xl font-black font-mono text-foreground">{avg.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground">/ 4</p>
+                </div>
+              )}
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+
+          {/* Corps */}
+          <div className="flex-1 px-6 py-5 space-y-6">
+            {/* Infos */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Référent', value: reponse.referent || '—' },
+                { label: 'Date de prise de poste', value: reponse.datePriseDeFonction || '—' },
+              ].map((f, i) => (
+                <div key={i} className="bg-muted/50 rounded-xl p-3">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">{f.label}</p>
+                  <p className="text-xs font-semibold text-foreground">{f.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Domaines */}
+            {cfg ? cfg.domaines.map(domaine => {
+              const domNotes = domaine.questionsNotes
+                .map(q => ({ q, r: reponse.notes.find(n => n.questionId === q.id) }))
+                .filter(({ r }) => r !== undefined);
+              const domOuvertes = domaine.questionsOuvertes
+                .map(q => ({ q, r: reponse.ouvertes.find(o => o.questionId === q.id) }))
+                .filter(({ r }) => r?.texte);
+
+              if (domNotes.length === 0 && domOuvertes.length === 0) return null;
+
+              return (
+                <div key={domaine.id}>
+                  <h3 className="text-xs font-bold text-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-primary rounded-full inline-block" />
+                    {domaine.titre}
+                  </h3>
+                  <div className="space-y-3">
+                    {/* Questions notées */}
+                    {domNotes.map(({ q, r }) => (
+                      <div key={q.id} className="bg-card border border-border rounded-xl p-3 flex items-start gap-3">
+                        <Star className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-foreground leading-relaxed">{q.label}</p>
+                        </div>
+                        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                          <div className={`w-7 h-7 rounded-lg ${noteColor(r!.valeur)} flex items-center justify-center`}>
+                            <span className="text-white text-xs font-black">{r!.valeur}</span>
+                          </div>
+                          <span className="text-[9px] text-muted-foreground text-center leading-tight max-w-[56px]">{noteLabel(r!.valeur)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Questions ouvertes */}
+                    {domOuvertes.map(({ q, r }) => (
+                      <div key={q.id} className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <div className="flex items-start gap-2 mb-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs font-medium text-blue-700 leading-relaxed">{q.label}</p>
+                        </div>
+                        <p className="text-xs text-foreground leading-relaxed pl-5 italic">« {r!.texte} »</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }) : (
+              <p className="text-sm text-muted-foreground text-center py-8">Configuration du questionnaire introuvable</p>
+            )}
+          </div>
+        </motion.aside>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function TabDashboard() {
   const [reponses, setReponses] = useState<Reponse[]>([]);
+  const [configs, setConfigs] = useState<QuestionnaireConfig[]>(DEFAULT_QUESTIONNAIRES);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Reponse | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setReponses(await fetchReponses()); }
+    try {
+      const [reps, cfgs] = await Promise.all([fetchReponses(), fetchConfig()]);
+      setReponses(reps);
+      if (cfgs.length > 0) setConfigs(cfgs);
+    }
     catch { setReponses([]); }
     finally { setLoading(false); }
   }, []);
@@ -669,6 +813,13 @@ function TabDashboard() {
 
   return (
     <div className="space-y-6">
+      {selected && (
+        <DetailPanel
+          reponse={selected}
+          configs={configs}
+          onClose={() => setSelected(null)}
+        />
+      )}
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
@@ -721,7 +872,12 @@ function TabDashboard() {
       {/* Tableau données */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wide">Toutes les réponses ({reponses.length})</h3>
+          <div>
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wide">Toutes les réponses ({reponses.length})</h3>
+            {reponses.length > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">Cliquez sur une ligne pour voir le détail complet</p>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-[10px] font-semibold text-foreground hover:bg-muted transition-colors">
               <RefreshCw className="w-3 h-3" /> Actualiser
@@ -751,7 +907,11 @@ function TabDashboard() {
                   const avg = moyenne(r.notes.map(n => n.valeur));
                   const init = `${(r.prenom||'?').charAt(0).toUpperCase()}${(r.nom||'?').charAt(0).toUpperCase()}`;
                   return (
-                    <tr key={r.id} className="border-t border-border hover:bg-muted/20 transition-colors">
+                    <tr
+                      key={r.id}
+                      onClick={() => setSelected(r)}
+                      className="border-t border-border hover:bg-primary/5 cursor-pointer transition-colors group"
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -766,9 +926,15 @@ function TabDashboard() {
                       <td className="px-3 py-3 text-center text-xs font-bold font-mono">{avg?.toFixed(2) ?? '—'}</td>
                       <td className="px-3 py-3 text-center"><NiveauBadge avg={avg} /></td>
                       <td className="px-3 py-3 text-center">
-                        <button onClick={() => handleDelete(r.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDelete(r.id); }}
+                            className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
