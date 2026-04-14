@@ -1,14 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
-  getQuestionnaires,
   POSTES,
-  saveReponse,
   type PosteType,
   type QType,
   type ReponseNote,
   type ReponseOuverte,
   type QuestionnaireConfig,
 } from '@/lib/index';
+import { fetchConfig, insertReponse } from '@/lib/db';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springPresets } from '@/lib/motion';
 import { CheckCircle2, ChevronRight, ChevronLeft, Send, AlertCircle } from 'lucide-react';
@@ -432,15 +431,22 @@ export default function QuestionnairePage() {
   const [notes, setNotes] = useState<Record<string, number>>({});
   const [ouvertes, setOuvertes] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [allConfigs, setAllConfigs] = useState<QuestionnaireConfig[]>([]);
+  const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    fetchConfig().then(setAllConfigs).catch(() => setAllConfigs([]));
+  }, []);
 
   const config = useMemo(
-    () => getQuestionnaires().find((q) => q.type === qType) ?? null,
-    [qType]
+    () => allConfigs.find((q) => q.type === qType) ?? null,
+    [qType, allConfigs]
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!poste || !qType || !config) return;
     setSubmitting(true);
+    setSubmitError('');
 
     const notesArr: ReponseNote[] = Object.entries(notes).map(([questionId, valeur]) => ({
       questionId,
@@ -450,20 +456,22 @@ export default function QuestionnairePage() {
       .filter(([, texte]) => texte.trim())
       .map(([questionId, texte]) => ({ questionId, texte }));
 
-    saveReponse({
-      poste,
-      questionnaire: qType,
-      datePriseDeFonction: datePrise,
-      dateCompletion,
-      referent,
-      notes: notesArr,
-      ouvertes: ouvertesArr,
-    });
-
-    setTimeout(() => {
+    try {
+      await insertReponse({
+        poste,
+        questionnaire: qType,
+        datePriseDeFonction: datePrise,
+        dateCompletion,
+        referent,
+        notes: notesArr,
+        ouvertes: ouvertesArr,
+      });
       setSubmitting(false);
       setStep('done');
-    }, 600);
+    } catch (e) {
+      setSubmitting(false);
+      setSubmitError('Erreur lors de l\'enregistrement. Vérifiez votre connexion et réessayez.');
+    }
   };
 
   const handleNew = () => {
@@ -475,6 +483,7 @@ export default function QuestionnairePage() {
     setReferent('');
     setNotes({});
     setOuvertes({});
+    setSubmitError('');
   };
 
   return (
@@ -518,6 +527,12 @@ export default function QuestionnairePage() {
             onBack={() => setStep('ident')}
             submitting={submitting}
           />
+        )}
+        {submitError && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-50 border border-red-300 text-red-700 text-xs px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50">
+            <span>{submitError}</span>
+            <button onClick={() => setSubmitError('')} className="ml-2 font-bold">✕</button>
+          </div>
         )}
         {step === 'done' && <StepDone key="done" onNew={handleNew} />}
       </AnimatePresence>

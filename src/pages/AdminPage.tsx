@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  getQuestionnaires, saveQuestionnaires, resetQuestionnaires,
   isAdminAuthenticated, adminLogin, adminLogout,
   setAdminPassword, getAdminPassword,
   genId,
@@ -8,6 +7,7 @@ import {
   DEFAULT_QUESTIONNAIRES,
   type QuestionnaireConfig, type Domaine, type QuestionNote, type QuestionOuverte, type PosteType, type QType,
 } from '@/lib/index';
+import { fetchConfig, upsertConfig, resetConfig } from '@/lib/db';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springPresets } from '@/lib/motion';
 import {
@@ -571,38 +571,59 @@ type AdminTab = 'questionnaires' | 'parametres';
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(isAdminAuthenticated());
-  const [configs, setConfigs] = useState<QuestionnaireConfig[]>(() => getQuestionnaires());
+  const [configs, setConfigs] = useState<QuestionnaireConfig[]>([]);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('questionnaires');
   const [activeQ, setActiveQ] = useState<QType>('1 mois');
   const [saved, setSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  const handleSave = useCallback(() => {
-    saveQuestionnaires(configs);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    if (!authed) return;
+    fetchConfig()
+      .then(setConfigs)
+      .catch(() => setConfigs(DEFAULT_QUESTIONNAIRES.map(q => JSON.parse(JSON.stringify(q)))))
+      .finally(() => setLoadingConfig(false));
+  }, [authed]);
+
+  const handleSave = useCallback(async () => {
+    setSaveError('');
+    try {
+      await upsertConfig(configs);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setSaveError('Erreur lors de la sauvegarde. Vérifiez votre connexion.');
+    }
   }, [configs]);
 
-  const handleReset = () => {
-    resetQuestionnaires();
-    setConfigs(DEFAULT_QUESTIONNAIRES.map(q => JSON.parse(JSON.stringify(q))));
-    setShowResetConfirm(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleReset = async () => {
+    try {
+      await resetConfig();
+      setConfigs(DEFAULT_QUESTIONNAIRES.map(q => JSON.parse(JSON.stringify(q))));
+      setShowResetConfirm(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setSaveError('Erreur lors de la réinitialisation.');
+    }
   };
 
-  const handleLogout = () => {
-    adminLogout();
-    setAuthed(false);
-  };
-
+  const handleLogout = () => { adminLogout(); setAuthed(false); };
   const updateConfig = (qType: QType, updated: QuestionnaireConfig) => {
     setConfigs(prev => prev.map(c => c.type === qType ? updated : c));
   };
 
-  if (!authed) {
-    return <AuthGate onLogin={() => setAuthed(true)} />;
-  }
+  if (!authed) return <AuthGate onLogin={() => setAuthed(true)} />;
+  if (loadingConfig) return (
+    <div className="flex items-center justify-center py-24">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Chargement de la configuration…</p>
+      </div>
+    </div>
+  );
 
   const currentConfig = configs.find(c => c.type === activeQ)!;
 
@@ -654,6 +675,14 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
+
+      {/* Erreur sauvegarde */}
+      {saveError && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-3 rounded-xl mb-4">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {saveError}
+          <button onClick={() => setSaveError('')} className="ml-auto font-bold">✕</button>
+        </div>
+      )}
 
       {/* Confirm reset modal */}
       <AnimatePresence>
