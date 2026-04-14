@@ -50,9 +50,8 @@ export default function HomePage() {
         <div className="relative">
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-white rounded-xl px-3 py-2 shadow-sm">
-              <SomNumLogo height={38} />
+              <SomNumLogo height={44} showSubtitle={false} />
             </div>
-            <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">Cabinet de Médecine du Sommeil</span>
           </div>
 
           <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-3">

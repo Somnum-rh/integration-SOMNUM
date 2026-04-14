@@ -45,8 +45,8 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
   return (
     <>
       {/* Logo */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <SomNumLogo height={44} />
+      <div className="flex items-center justify-between px-4 py-4 border-b border-border">
+        <SomNumLogo height={52} showSubtitle={true} />
         {onClose && (
           <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors md:hidden">
             <X className="w-4 h-4 text-muted-foreground" />

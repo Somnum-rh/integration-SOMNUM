@@ -1,59 +1,95 @@
 /**
- * Logo SomNum — reproduction SVG fidèle
- * Couleurs : violet foncé #4D3A74 / violet vif #8D4A92 / lilas #C6A4D0
+ * Logo SomNum — reproduction SVG haute fidélité
+ * "som" : Montserrat Bold #5D4288
+ * "Num" : Dancing Script Bold #944988
+ * Sous-titre : Montserrat Regular #BDB0B8
+ * Cercles + arc : #C391B3
  */
-export default function SomNumLogo({ className = '', height = 48 }: { className?: string; height?: number }) {
+export default function SomNumLogo({
+  className = '',
+  height = 56,
+  showSubtitle = true,
+}: {
+  className?: string;
+  height?: number;
+  showSubtitle?: boolean;
+}) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 160 70"
+      viewBox={showSubtitle ? '0 0 260 90' : '0 0 260 65'}
       height={height}
       className={className}
-      aria-label="SomNum"
+      aria-label="SomNum — Centre de Médecine du Sommeil"
+      style={{ fontFamily: "'Poppins', 'Montserrat', sans-serif" }}
     >
-      {/* ── Cercles décoratifs (bulles) ── */}
-      {/* Grand cercle plein en bas-gauche */}
-      <circle cx="14" cy="50" r="10" fill="#C6A4D0" opacity="0.7" />
-      {/* Cercle moyen contour */}
-      <circle cx="22" cy="28" r="7" fill="none" stroke="#C6A4D0" strokeWidth="2" />
-      {/* Petit cercle plein en haut */}
-      <circle cx="10" cy="16" r="4" fill="#C6A4D0" />
+      <defs>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@400;700&display=swap');
+        `}</style>
+      </defs>
 
-      {/* ── Arc / ligne fluide sous le texte ── */}
+      {/* ── Cercles décoratifs ───────────────────────────────── */}
+      {/* Très petit cercle, haut gauche au-dessus du "s" */}
+      <circle cx="26" cy="10" r="3" fill="#C391B3" />
+      {/* Petit cercle creux sous le "s" */}
+      <circle cx="19" cy="32" r="5" fill="none" stroke="#D8C9D3" strokeWidth="1.5" />
+      {/* Grand cercle plein entre "som" et "Num" */}
+      <circle cx="98" cy="40" r="5.5" fill="#C391B3" />
+      {/* Petit cercle plein, bas gauche */}
+      <circle cx="30" cy="48" r="2.5" fill="#C391B3" />
+
+      {/* ── Arc fluide sous "som Num" ─────────────────────────── */}
+      {/* Courbe de Bézier douce traversant le logo */}
       <path
-        d="M 8 58 Q 60 72 148 54"
+        d="M 18 54 C 40 64, 70 58, 98 56 C 126 54, 170 62, 220 52"
         fill="none"
-        stroke="#C6A4D0"
-        strokeWidth="2.2"
+        stroke="#C391B3"
+        strokeWidth="1.8"
         strokeLinecap="round"
       />
 
-      {/* ── Texte "som" (sans-serif arrondi, violet foncé) ── */}
+      {/* ── Texte "som" — Montserrat Bold, violet foncé ─────── */}
       <text
-        x="34"
-        y="36"
-        fontFamily="'Poppins', 'Nunito', 'Segoe UI', sans-serif"
-        fontWeight="600"
-        fontSize="24"
-        fill="#4D3A74"
-        letterSpacing="0.5"
+        x="30"
+        y="44"
+        fontFamily="'Montserrat', 'Poppins', sans-serif"
+        fontWeight="700"
+        fontSize="30"
+        fill="#5D4288"
+        letterSpacing="-0.5"
       >
         som
       </text>
 
-      {/* ── Texte "Num" (script/italic, violet vif) ── */}
+      {/* ── Texte "Num" — Dancing Script Bold, violet rosé ──── */}
+      {/* Décalé vers le bas et la droite par rapport à "som" */}
       <text
-        x="46"
-        y="57"
-        fontFamily="'Dancing Script', 'Pacifico', cursive"
+        x="105"
+        y="52"
+        fontFamily="'Dancing Script', cursive"
         fontWeight="700"
-        fontSize="26"
-        fill="#8D4A92"
-        fontStyle="italic"
-        letterSpacing="0.5"
+        fontSize="32"
+        fill="#944988"
       >
         Num
       </text>
+
+      {/* ── Sous-titre — uniquement si showSubtitle ───────────── */}
+      {showSubtitle && (
+        <text
+          x="130"
+          y="76"
+          fontFamily="'Montserrat', 'Poppins', sans-serif"
+          fontWeight="400"
+          fontSize="8.5"
+          fill="#BDB0B8"
+          textAnchor="middle"
+          letterSpacing="0.3"
+        >
+          Centre de Médecine du Sommeil
+        </text>
+      )}
     </svg>
   );
 }
