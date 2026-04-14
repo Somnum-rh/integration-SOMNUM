@@ -2,19 +2,24 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   isAdminAuthenticated, adminLogin, adminLogout,
   setAdminPassword, getAdminPassword,
-  genId,
+  genId, moyenne, niveauLabel, POSTES,
   ALL_POSTES_OPTIONS,
   DEFAULT_QUESTIONNAIRES,
-  type QuestionnaireConfig, type Domaine, type QuestionNote, type QuestionOuverte, type PosteType, type QType,
+  type QuestionnaireConfig, type Domaine, type QuestionNote, type QuestionOuverte,
+  type PosteType, type QType, type Reponse,
 } from '@/lib/index';
-import { fetchConfig, upsertConfig, resetConfig } from '@/lib/db';
+import { fetchConfig, upsertConfig, resetConfig, fetchReponses, removeReponse, exportCSVFromDb } from '@/lib/db';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springPresets } from '@/lib/motion';
 import {
   Lock, LogOut, Save, RotateCcw, Plus, Trash2, ChevronUp, ChevronDown,
   Eye, EyeOff, Shield, Edit3, CheckCircle2, X, GripVertical, Settings,
-  FileText, ClipboardList, AlertTriangle, KeyRound,
+  FileText, ClipboardList, AlertTriangle, KeyRound, BarChart2, Download, RefreshCw, Users, Loader2,
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell,
+} from 'recharts';
 
 // ─── Auth Gate ────────────────────────────────────────────────────────────────
 function AuthGate({ onLogin }: { onLogin: () => void }) {
@@ -598,15 +603,191 @@ function QuestionnaireEditor({
   );
 }
 
-// ─── Page Admin principale ────────────────────────────────────────────────────
-type AdminTab = 'questionnaires' | 'parametres';
+type AdminTab = 'dashboard' | 'questionnaires' | 'parametres';
+
+// ─── Onglet Dashboard ────────────────────────────────────────────────────────
+const QTYPES_DASH: QType[] = ['post-formation', '4-6 mois'];
+const COLORS_DASH: Record<QType, string> = { 'post-formation': '#3B82F6', '4-6 mois': '#8B5CF6' };
+const LABELS_DASH: Record<QType, string> = { 'post-formation': 'Post formation', '4-6 mois': 'Bilan 4-6 mois' };
+const COLORS_POSTE = ['#2563EB', '#0D9488', '#7C3AED', '#D97706', '#DC2626'];
+
+function NiveauBadge({ avg }: { avg: number | null }) {
+  const { label, color } = niveauLabel(avg);
+  const bg = avg === null ? 'bg-gray-100 text-gray-500'
+    : avg >= 3.5 ? 'bg-green-100 text-green-700'
+    : avg >= 3   ? 'bg-blue-100 text-blue-700'
+    : avg >= 2.5 ? 'bg-orange-100 text-orange-700'
+    : 'bg-red-100 text-red-700';
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${bg}`} style={{ color }}>{label}{avg !== null ? ` (${avg.toFixed(2)})` : ''}</span>;
+}
+
+function TabDashboard() {
+  const [reponses, setReponses] = useState<Reponse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setReponses(await fetchReponses()); }
+    catch { setReponses([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Supprimer cette réponse ?')) return;
+    await removeReponse(id).catch(() => {});
+    setReponses(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleExport = async () => {
+    try {
+      const csv = await exportCSVFromDb();
+      if (!csv) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      a.download = `reponses_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    } catch { alert('Erreur export.'); }
+  };
+
+  const byQType = QTYPES_DASH.map(qt => {
+    const subset = reponses.filter(r => r.questionnaire === qt);
+    const vals = subset.flatMap(r => r.notes.map(n => n.valeur));
+    return { name: LABELS_DASH[qt], avg: moyenne(vals), count: subset.length, fill: COLORS_DASH[qt] };
+  });
+  const byPoste = POSTES.map((p, i) => {
+    const vals = reponses.filter(r => r.poste === p).flatMap(r => r.notes.map(n => n.valeur));
+    return { name: p, avg: moyenne(vals), color: COLORS_POSTE[i] };
+  }).filter(d => d.avg !== null);
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-7 h-7 text-primary animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Total réponses', value: reponses.length },
+          { label: 'Moyenne globale', value: moyenne(reponses.flatMap(r => r.notes.map(n => n.valeur)))?.toFixed(2) ?? '—' },
+          { label: 'Post formation', value: reponses.filter(r => r.questionnaire === 'post-formation').length },
+          { label: 'Bilan 4-6 mois', value: reponses.filter(r => r.questionnaire === '4-6 mois').length },
+        ].map((k, i) => (
+          <div key={i} className="bg-card border border-border rounded-xl p-4">
+            <p className="text-[10px] text-muted-foreground font-medium mb-1 uppercase tracking-wide">{k.label}</p>
+            <p className="text-2xl font-bold text-foreground font-mono">{k.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Graphiques */}
+      {reponses.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wide mb-4">Moyenne par bilan</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={byQType} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis domain={[0, 4]} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: number) => [v?.toFixed(2), 'Moy.']} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                <Bar dataKey="avg" radius={[6,6,0,0]}>
+                  {byQType.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wide mb-4">Moyenne par poste</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={byPoste} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+                <YAxis domain={[0, 4]} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: number) => [v?.toFixed(2), 'Moy.']} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                <Bar dataKey="avg" radius={[6,6,0,0]}>
+                  {byPoste.map((d, i) => <Cell key={i} fill={d.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Tableau données */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/40">
+          <h3 className="text-xs font-bold text-foreground uppercase tracking-wide">Toutes les réponses ({reponses.length})</h3>
+          <div className="flex items-center gap-2">
+            <button onClick={load} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-[10px] font-semibold text-foreground hover:bg-muted transition-colors">
+              <RefreshCw className="w-3 h-3" /> Actualiser
+            </button>
+            <button onClick={handleExport} disabled={reponses.length === 0} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40">
+              <Download className="w-3 h-3" /> Export CSV
+            </button>
+          </div>
+        </div>
+        {reponses.length === 0 ? (
+          <div className="flex flex-col items-center py-14 text-center">
+            <Users className="w-10 h-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm text-muted-foreground">Aucune réponse enregistrée</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead className="border-b border-border">
+                <tr>
+                  {['Collaborateur', 'Poste', 'Bilan', 'Date', 'Moy.', 'Niveau', ''].map((h, i) => (
+                    <th key={i} className={`py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wide ${i <= 3 ? 'text-left px-4' : 'text-center px-3'}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {reponses.map(r => {
+                  const avg = moyenne(r.notes.map(n => n.valeur));
+                  const init = `${(r.prenom||'?').charAt(0).toUpperCase()}${(r.nom||'?').charAt(0).toUpperCase()}`;
+                  return (
+                    <tr key={r.id} className="border-t border-border hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-primary">{init}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-foreground">{r.prenom} {(r.nom||'').toUpperCase()}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.poste}</td>
+                      <td className="px-4 py-3"><span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-bold">{r.questionnaire}</span></td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.dateCompletion || '—'}</td>
+                      <td className="px-3 py-3 text-center text-xs font-bold font-mono">{avg?.toFixed(2) ?? '—'}</td>
+                      <td className="px-3 py-3 text-center"><NiveauBadge avg={avg} /></td>
+                      <td className="px-3 py-3 text-center">
+                        <button onClick={() => handleDelete(r.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(isAdminAuthenticated());
   const [configs, setConfigs] = useState<QuestionnaireConfig[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [saveError, setSaveError] = useState('');
-  const [activeTab, setActiveTab] = useState<AdminTab>('questionnaires');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [activeQ, setActiveQ] = useState<QType>('post-formation');
   const [saved, setSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -942,6 +1123,7 @@ export default function AdminPage() {
       {/* Tabs admin */}
       <div className="flex gap-1 p-1 bg-muted rounded-xl mb-6 w-fit">
         {([
+          { id: 'dashboard', label: 'Tableau de bord', icon: BarChart2 },
           { id: 'questionnaires', label: 'Questionnaires', icon: ClipboardList },
           { id: 'parametres', label: 'Paramètres', icon: Settings },
         ] as { id: AdminTab; label: string; icon: React.ElementType }[]).map(t => (
@@ -960,6 +1142,9 @@ export default function AdminPage() {
           </button>
         ))}
       </div>
+
+      {/* ── Onglet Dashboard ─────────────────────────────── */}
+      {activeTab === 'dashboard' && <TabDashboard />}
 
       {/* ── Onglet Questionnaires ─────────────────────────── */}
       {activeTab === 'questionnaires' && (

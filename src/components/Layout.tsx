@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ROUTE_PATHS } from '@/lib/index';
-import { ClipboardList, Menu, X, Settings, type LucideIcon } from 'lucide-react';
+import { ClipboardList, Menu, X, Settings, BarChart2, type LucideIcon } from 'lucide-react';
 import SomNumLogo from '@/components/SomNumLogo';
 
-const NAV_ITEMS: { path: string; label: string; icon: LucideIcon | null }[] = [
+const NAV_ITEMS: { path: string; label: string; icon: LucideIcon | null; desc?: string }[] = [
   { path: ROUTE_PATHS.HOME, label: 'Accueil', icon: null },
   { path: ROUTE_PATHS.QUESTIONNAIRE, label: 'Remplir un questionnaire', icon: ClipboardList },
 ];
@@ -42,6 +42,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose?: () => void }) {
+  const isAdmin = currentPath === ROUTE_PATHS.ADMIN;
+
   return (
     <>
       {/* Logo */}
@@ -55,7 +57,9 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
       </div>
 
       {/* Navigation principale */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Général</p>
+
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const isActive = currentPath === path;
           return (
@@ -71,7 +75,7 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
             >
               {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
               {!Icon && (
-                <span className={`w-4 h-4 flex-shrink-0 flex items-center justify-center`}>
+                <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-primary-foreground' : 'bg-muted-foreground'}`} />
                 </span>
               )}
@@ -79,25 +83,45 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
             </NavLink>
           );
         })}
-      </nav>
 
-      {/* Section admin */}
-      <div className="px-3 pb-4">
-        <div className="h-px bg-border mb-3" />
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Administration</p>
-        <NavLink
-          to={ROUTE_PATHS.ADMIN}
-          onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-            currentPath === ROUTE_PATHS.ADMIN || currentPath === ROUTE_PATHS.DASHBOARD
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-          }`}
-        >
-          <Settings className="w-4 h-4 flex-shrink-0" />
-          Espace Admin
-        </NavLink>
-      </div>
+        {/* Section admin */}
+        <div className="pt-4">
+          <div className="h-px bg-border mb-4" />
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Administration</p>
+
+          <NavLink
+            to={ROUTE_PATHS.ADMIN}
+            onClick={onClose}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              isAdmin
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4 flex-shrink-0" />
+            <div>
+              <div>Tableau de bord</div>
+              {!isAdmin && <div className="text-[10px] opacity-60 font-normal">Statistiques & données</div>}
+            </div>
+          </NavLink>
+
+          <NavLink
+            to={ROUTE_PATHS.ADMIN}
+            onClick={onClose}
+            className={`mt-0.5 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              isAdmin
+                ? 'text-primary/70 hover:bg-primary/10'
+                : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            }`}
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            <div>
+              <div>Paramètres</div>
+              {!isAdmin && <div className="text-[10px] opacity-60 font-normal">Questionnaires & admin</div>}
+            </div>
+          </NavLink>
+        </div>
+      </nav>
 
       <div className="px-5 py-3 border-t border-border">
         <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
