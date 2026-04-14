@@ -18,6 +18,8 @@ export async function fetchReponses(): Promise<Reponse[]> {
 
   return (data ?? []).map((row) => ({
     id: row.id,
+    nom: row.nom ?? '',
+    prenom: row.prenom ?? '',
     poste: row.poste,
     questionnaire: row.questionnaire,
     datePriseDeFonction: row.date_prise_de_fonction ?? '',
@@ -36,6 +38,8 @@ export async function insertReponse(
   const { data, error } = await supabase
     .from('reponses')
     .insert({
+      nom: r.nom || null,
+      prenom: r.prenom || null,
       poste: r.poste,
       questionnaire: r.questionnaire,
       date_prise_de_fonction: r.datePriseDeFonction || null,
@@ -51,6 +55,8 @@ export async function insertReponse(
 
   return {
     id: data.id,
+    nom: data.nom ?? '',
+    prenom: data.prenom ?? '',
     poste: data.poste,
     questionnaire: data.questionnaire,
     datePriseDeFonction: data.date_prise_de_fonction ?? '',
@@ -79,14 +85,14 @@ export async function exportCSVFromDb(): Promise<string> {
   );
 
   const header = [
-    'ID', 'Poste', 'Questionnaire', 'Date prise de fonction',
+    'ID', 'Nom', 'Prénom', 'Poste', 'Questionnaire', 'Date prise de fonction',
     'Date complétion', 'Référent', ...allNoteIds, 'Créé le',
   ].join(';');
 
   const rows = reponses.map((r) => {
     const noteMap = Object.fromEntries(r.notes.map((n) => [n.questionId, n.valeur]));
     return [
-      r.id, r.poste, r.questionnaire,
+      r.id, r.nom, r.prenom, r.poste, r.questionnaire,
       r.datePriseDeFonction, r.dateCompletion, r.referent,
       ...allNoteIds.map((id) => noteMap[id] ?? ''),
       r.createdAt,

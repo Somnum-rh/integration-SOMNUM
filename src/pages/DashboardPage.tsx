@@ -3,6 +3,8 @@ import {
   POSTES,
   moyenne,
   niveauLabel,
+  isAdminAuthenticated,
+  adminLogin,
   type Reponse,
   type QType,
   type PosteType,
@@ -22,7 +24,7 @@ import { motion } from 'framer-motion';
 import { springPresets } from '@/lib/motion';
 import {
   Download, Trash2, RefreshCw, Users, ClipboardList,
-  TrendingUp, AlertCircle, Loader2,
+  TrendingUp, AlertCircle, Loader2, Lock, Eye, EyeOff, BarChart2,
 } from 'lucide-react';
 
 const QTYPES: QType[] = ['1 mois', '3 mois', '6 mois'];
@@ -354,28 +356,36 @@ function TabDonnees({ reponses, onDelete }: { reponses: Reponse[]; onDelete: (id
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="border-b border-border bg-muted/40">
             <tr>
-              {['Poste', 'Bilan', 'Date complétion', 'Référent', 'Nb notes', 'Moyenne', 'Niveau', ''].map((h, i) => (
-                <th key={i} className={`py-3 text-xs font-semibold text-muted-foreground ${i < 2 ? 'text-left px-4' : i <= 3 ? 'text-left px-4' : 'text-center px-4'}`}>{h}</th>
+              {['Collaborateur', 'Poste', 'Bilan', 'Date complétion', 'Référent', 'Moy.', 'Niveau', ''].map((h, i) => (
+                <th key={i} className={`py-3 text-xs font-semibold text-muted-foreground ${i <= 4 ? 'text-left px-4' : 'text-center px-4'}`}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {reponses.map((r) => {
               const avg = moyenne(r.notes.map((n) => n.valeur));
+              const initiales = `${(r.prenom || '?').charAt(0).toUpperCase()}${(r.nom || '?').charAt(0).toUpperCase()}`;
               return (
                 <tr key={r.id} className="border-t border-border hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-xs font-medium text-foreground">{r.poste}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-primary">{initiales}</span>
+                      </div>
+                      <p className="text-xs font-semibold text-foreground">{r.prenom} {r.nom ? r.nom.toUpperCase() : ''}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{r.poste}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-semibold">{r.questionnaire}</span></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{r.dateCompletion || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{r.referent || '—'}</td>
-                  <td className="px-4 py-3 text-center text-xs text-foreground font-mono">{r.notes.length}</td>
                   <td className="px-4 py-3 text-center text-xs font-bold text-foreground font-mono">{avg?.toFixed(2) ?? '—'}</td>
                   <td className="px-4 py-3 text-center"><Badge avg={avg} /></td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={() => { if (window.confirm('Supprimer cette réponse ?')) onDelete(r.id); }} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors">
+                    <button onClick={() => { if (window.confirm(`Supprimer la réponse de ${r.prenom} ${r.nom} ?`)) onDelete(r.id); }} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </td>
@@ -389,10 +399,60 @@ function TabDonnees({ reponses, onDelete }: { reponses: Reponse[]; onDelete: (id
   );
 }
 
+// ─── Auth Gate Dashboard ─────────────────────────────────────────────────────
+function DashboardAuthGate({ onLogin }: { onLogin: () => void }) {
+  const [pwd, setPwd] = useState('');
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminLogin(pwd)) { onLogin(); }
+    else { setError('Mot de passe incorrect.'); setPwd(''); }
+  };
+
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="bg-card border border-border rounded-2xl p-8 w-full max-w-sm shadow-sm">
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-sm">
+            <BarChart2 className="w-7 h-7 text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Tableau de bord</h1>
+          <p className="text-xs text-muted-foreground mt-1 text-center">Accès réservé aux administrateurs</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Mot de passe administrateur</label>
+            <div className="relative">
+              <input
+                type={show ? 'text' : 'password'}
+                value={pwd}
+                onChange={e => { setPwd(e.target.value); setError(''); }}
+                placeholder="••••••••"
+                autoFocus
+                className="w-full px-3 py-2.5 pr-10 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {error && <p className="text-xs text-red-600 mt-1.5">{error}</p>}
+          </div>
+          <button type="submit" className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" /> Accéder au tableau de bord
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page Dashboard ───────────────────────────────────────────────────────────
 type Tab = 'synthese' | 'questions' | 'progression' | 'donnees';
 
 export default function DashboardPage() {
+  const [authed, setAuthed] = useState(isAdminAuthenticated());
   const [tab, setTab] = useState<Tab>('synthese');
   const [reponses, setReponses] = useState<Reponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -444,6 +504,8 @@ export default function DashboardPage() {
     { id: 'progression', label: 'Progression' },
     { id: 'donnees', label: 'Données brutes' },
   ];
+
+  if (!authed) return <DashboardAuthGate onLogin={() => setAuthed(true)} />;
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={springPresets.gentle}>

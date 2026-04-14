@@ -55,6 +55,8 @@ export interface ReponseOuverte {
 
 export interface Reponse {
   id: string;
+  nom: string;
+  prenom: string;
   poste: PosteType;
   questionnaire: QType;
   datePriseDeFonction: string;

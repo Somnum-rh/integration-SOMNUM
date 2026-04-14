@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ROUTE_PATHS } from '@/lib/index';
-import {
-  ClipboardList, BarChart2, Menu, X, Moon, Home, Settings,
-} from 'lucide-react';
+import { ClipboardList, Menu, X, Moon, Home, Settings } from 'lucide-react';
 
+// Dashboard est accessible uniquement depuis l'admin — retiré du nav public
 const NAV_ITEMS = [
   { path: ROUTE_PATHS.HOME, label: 'Accueil', icon: Home },
   { path: ROUTE_PATHS.QUESTIONNAIRE, label: 'Remplir un questionnaire', icon: ClipboardList },
-  { path: ROUTE_PATHS.DASHBOARD, label: 'Tableau de bord', icon: BarChart2 },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -48,10 +46,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose?: () => void }) {
   return (
     <>
+      {/* Logo */}
       <div className="flex items-center justify-between gap-3 px-5 py-5 border-b border-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-            <Moon className="w-4 h-4 text-primary-foreground" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+            <Moon className="w-4.5 h-4.5 text-primary-foreground" />
           </div>
           <div>
             <p className="text-xs font-bold text-foreground leading-tight">Médecine du Sommeil</p>
@@ -65,7 +64,8 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
         )}
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      {/* Navigation principale */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const isActive = currentPath === path;
           return (
@@ -73,7 +73,7 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
               key={path}
               to={path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -86,14 +86,15 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
         })}
       </nav>
 
-      {/* Séparateur + lien Admin */}
-      <div className="px-3 pb-3">
+      {/* Section admin séparée */}
+      <div className="px-3 pb-4">
         <div className="h-px bg-border mb-3" />
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-3 mb-2">Administration</p>
         <NavLink
           to={ROUTE_PATHS.ADMIN}
           onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-            currentPath === ROUTE_PATHS.ADMIN
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+            currentPath === ROUTE_PATHS.ADMIN || currentPath === ROUTE_PATHS.DASHBOARD
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           }`}
@@ -103,10 +104,9 @@ function SidebarContent({ currentPath, onClose }: { currentPath: string; onClose
         </NavLink>
       </div>
 
-      <div className="px-5 py-4 border-t border-border">
+      <div className="px-5 py-3 border-t border-border">
         <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
-          Cabinet de Médecine du Sommeil<br />
-          Usage interne — Données confidentielles
+          Usage interne · Données confidentielles
         </p>
       </div>
     </>
