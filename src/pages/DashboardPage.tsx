@@ -27,11 +27,10 @@ import {
   TrendingUp, AlertCircle, Loader2, Lock, Eye, EyeOff, BarChart2,
 } from 'lucide-react';
 
-const QTYPES: QType[] = ['1 mois', '3 mois', '6 mois'];
+const QTYPES: QType[] = ['post-formation', '4-6 mois'];
 const COLORS_QTYPE: Record<QType, string> = {
-  '1 mois': '#3B82F6',
-  '3 mois': '#6366F1',
-  '6 mois': '#8B5CF6',
+  'post-formation': '#3B82F6',
+  '4-6 mois': '#8B5CF6',
 };
 const COLORS_POSTE = ['#2563EB', '#0D9488', '#7C3AED', '#D97706', '#DC2626'];
 
@@ -166,7 +165,7 @@ function TabSynthese({ reponses }: { reponses: Reponse[] }) {
 
 // ─── Onglet Détail par question ──────────────────────────────────────────────
 function TabQuestions({ reponses }: { reponses: Reponse[] }) {
-  const [selectedQ, setSelectedQ] = useState<QType>('1 mois');
+  const [selectedQ, setSelectedQ] = useState<QType>('post-formation');
   const [selectedPoste, setSelectedPoste] = useState<PosteType | 'Tous'>('Tous');
   const [configs, setConfigs] = useState<Array<{ type: QType; domaines: Array<{ titre: string; questionsNotes: Array<{ id: string; label: string; postes?: PosteType[] }> }> }>>([]);
 

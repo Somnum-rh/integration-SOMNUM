@@ -514,8 +514,8 @@ function QuestionnaireEditor({
   onDomaineMove: (domaineId: string, dir: 'up' | 'down') => void;
   onDomaineAdd: () => void;
 }) {
-  const LABEL_MAP: Record<QType, string> = { '1 mois': 'Bilan 1 mois', '3 mois': 'Bilan 3 mois', '6 mois': 'Bilan 6 mois' };
-  const COLOR_MAP: Record<QType, string> = { '1 mois': 'bg-blue-600', '3 mois': 'bg-indigo-600', '6 mois': 'bg-violet-600' };
+  const LABEL_MAP: Record<QType, string> = { 'post-formation': 'Post formation', '4-6 mois': 'Bilan 4-6 mois' };
+  const COLOR_MAP: Record<QType, string> = { 'post-formation': 'bg-blue-600', '4-6 mois': 'bg-violet-600' };
 
   return (
     <div className="space-y-5">
@@ -607,7 +607,7 @@ export default function AdminPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('questionnaires');
-  const [activeQ, setActiveQ] = useState<QType>('1 mois');
+  const [activeQ, setActiveQ] = useState<QType>('post-formation');
   const [saved, setSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -947,12 +947,12 @@ export default function AdminPage() {
       {activeTab === 'questionnaires' && (
         <div>
           {/* Sélecteur de questionnaire */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {(['1 mois', '3 mois', '6 mois'] as QType[]).map((qt, i) => {
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {(['post-formation', '4-6 mois'] as QType[]).map((qt, i) => {
               const cfg = configs.find(c => c.type === qt)!;
               const totalQ = cfg.domaines.reduce((s, d) => s + d.questionsNotes.length + d.questionsOuvertes.length, 0);
-              const colors = ['border-blue-300 bg-blue-50 text-blue-700', 'border-indigo-300 bg-indigo-50 text-indigo-700', 'border-violet-300 bg-violet-50 text-violet-700'];
-              const activeColors = ['border-blue-500 bg-blue-600 text-white', 'border-indigo-500 bg-indigo-600 text-white', 'border-violet-500 bg-violet-600 text-white'];
+              const colors = ['border-blue-300 bg-blue-50 text-blue-700', 'border-violet-300 bg-violet-50 text-violet-700'];
+              const activeColors = ['border-blue-500 bg-blue-600 text-white', 'border-violet-500 bg-violet-600 text-white'];
               const isActive = activeQ === qt;
               return (
                 <button

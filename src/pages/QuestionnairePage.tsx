@@ -59,14 +59,12 @@ function StepChoix({
   onNext: () => void;
 }) {
   const QTYPES: { val: QType; label: string; desc: string; color: string }[] = [
-    { val: '1 mois', label: 'Bilan 1 mois', desc: 'Premières impressions et accueil', color: 'border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-400' },
-    { val: '3 mois', label: 'Bilan 3 mois', desc: 'Montée en autonomie', color: 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:border-indigo-400' },
-    { val: '6 mois', label: 'Bilan 6 mois', desc: 'Intégration complète', color: 'border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400' },
+    { val: 'post-formation', label: 'Post formation', desc: 'Premières impressions et accueil', color: 'border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-400' },
+    { val: '4-6 mois', label: 'Bilan 4-6 mois', desc: 'Intégration complète et perspectives', color: 'border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400' },
   ];
   const QTYPES_ACTIVE: Record<QType, string> = {
-    '1 mois': 'border-blue-500 bg-blue-600 text-white',
-    '3 mois': 'border-indigo-500 bg-indigo-600 text-white',
-    '6 mois': 'border-violet-500 bg-violet-600 text-white',
+    'post-formation': 'border-blue-500 bg-blue-600 text-white',
+    '4-6 mois': 'border-violet-500 bg-violet-600 text-white',
   };
 
   const canNext = nom.trim() && prenom.trim() && poste && qType;
@@ -150,7 +148,7 @@ function StepChoix({
           </div>
           <h2 className="text-sm font-bold text-foreground">Étape du bilan <span className="text-red-500">*</span></h2>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {QTYPES.map(({ val, label, desc, color }) => (
             <button
               key={val}

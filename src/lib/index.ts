@@ -14,7 +14,7 @@ export type PosteType =
   | 'Assistante médicale'
   | 'Secrétaire médicale';
 
-export type QType = '1 mois' | '3 mois' | '6 mois';
+export type QType = 'post-formation' | '4-6 mois';
 
 export interface QuestionNote {
   id: string;
@@ -87,8 +87,8 @@ export const ALL_POSTES_OPTIONS: PosteType[] = [
 // ─── Config par défaut ────────────────────────────────────────────────────────
 export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
   {
-    type: '1 mois',
-    titre: 'Bilan d\'intégration à 1 mois',
+    type: 'post-formation',
+    titre: 'Bilan Post Formation',
     objectif: 'Évaluer les premières impressions, les conditions d\'accueil et les besoins immédiats.',
     consignes: '1 = Pas du tout satisfait(e) · 2 = Peu satisfait(e) · 3 = Satisfait(e) · 4 = Très satisfait(e)',
     domaines: [
@@ -151,73 +151,8 @@ export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
     ],
   },
   {
-    type: '3 mois',
-    titre: 'Bilan d\'intégration à 3 mois',
-    objectif: 'Évaluer la montée en compétences, l\'autonomie acquise et la qualité de l\'accompagnement.',
-    consignes: '1 = Pas du tout / Non acquis · 2 = Partiellement · 3 = Satisfait / Acquis · 4 = Très satisfait / Totalement acquis',
-    domaines: [
-      {
-        id: 'd2_1',
-        titre: 'Montée en autonomie',
-        questionsNotes: [
-          { id: 'q2_n1', label: 'Niveau d\'autonomie dans la réalisation de vos missions quotidiennes' },
-          { id: 'q2_n2', label: 'Objectifs définis lors du bilan à 1 mois atteints' },
-          { id: 'q2_n3', label: 'Maîtrise des protocoles cliniques (pose actimétrie, PSG, scoring)', postes: ['Médecin', 'Infirmier(e)', 'Technicien du sommeil'] },
-          { id: 'q2_n4', label: 'Maîtrise des procédures administratives (agenda, facturation, courriers)', postes: ['Assistante médicale', 'Secrétaire médicale'] },
-        ],
-        questionsOuvertes: [
-          { id: 'q2_o1', label: 'Quels sont les domaines de compétences où vous vous sentez encore en difficulté ?', placeholder: 'Compétences à renforcer, actes ou tâches encore incertains...' },
-        ],
-      },
-      {
-        id: 'd2_2',
-        titre: 'Formation & accompagnement',
-        questionsNotes: [
-          { id: 'q2_n5', label: 'La formation / accompagnement reçu répond à vos besoins professionnels' },
-          { id: 'q2_n6', label: 'Les retours et feedbacks de votre responsable permettent de progresser efficacement' },
-        ],
-        questionsOuvertes: [
-          { id: 'q2_o2', label: 'Quelles formations complémentaires ou accompagnements spécifiques vous seraient utiles ?', placeholder: 'Formations souhaitées, besoins de mentorat...' },
-        ],
-      },
-      {
-        id: 'd2_3',
-        titre: 'Organisation & outils',
-        questionsNotes: [
-          { id: 'q2_n7', label: 'Organisation du travail (plannings, répartition des tâches, gestion des urgences)' },
-          { id: 'q2_n8', label: 'Logiciels et outils numériques (logiciel sommeil, DMP, messagerie sécurisée)' },
-        ],
-        questionsOuvertes: [
-          { id: 'q2_o3', label: 'Y a-t-il des procédures internes difficiles à appliquer ou peu adaptées ?', placeholder: 'Dysfonctionnements organisationnels, procédures à améliorer...' },
-        ],
-      },
-      {
-        id: 'd2_4',
-        titre: 'Collaboration & communication',
-        questionsNotes: [
-          { id: 'q2_n9', label: 'Communication au sein de l\'équipe (informations, réunions, échanges)' },
-          { id: 'q2_n10', label: 'Coordination interprofessionnelle (médecins, soignants, administratifs)' },
-          { id: 'q2_n11', label: 'Votre avis et vos suggestions sont pris en compte au sein de l\'équipe' },
-        ],
-        questionsOuvertes: [],
-      },
-      {
-        id: 'd2_5',
-        titre: 'Bilan & perspectives',
-        questionsNotes: [
-          { id: 'q2_n12', label: 'Satisfaction globale à 3 mois d\'intégration' },
-        ],
-        questionsOuvertes: [
-          { id: 'q2_o4', label: 'Quels ont été vos principaux apprentissages et réussites depuis votre arrivée ?', placeholder: 'Ce que vous avez appris, situations maîtrisées, progrès accomplis...' },
-          { id: 'q2_o5', label: 'Quels objectifs souhaiteriez-vous vous fixer pour les 3 prochains mois ?', placeholder: 'Objectifs personnels et professionnels...' },
-          { id: 'q2_o6', label: 'Avez-vous d\'autres remarques ou suggestions ?', placeholder: 'Remarques libres...' },
-        ],
-      },
-    ],
-  },
-  {
-    type: '6 mois',
-    titre: 'Bilan d\'intégration à 6 mois',
+    type: '4-6 mois',
+    titre: 'Bilan 4-6 mois',
     objectif: 'Évaluer l\'intégration complète, la maîtrise des compétences et les perspectives de développement.',
     consignes: '1 = Non atteint / Insatisfaisant · 2 = Partiellement · 3 = Atteint / Satisfaisant · 4 = Dépassé / Excellent',
     domaines: [
@@ -227,7 +162,7 @@ export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
         questionsNotes: [
           { id: 'q3_n1', label: 'Sentiment de pleine intégration au sein de l\'équipe' },
           { id: 'q3_n2', label: 'Le processus d\'intégration a permis d\'atteindre le niveau requis pour le poste' },
-          { id: 'q3_n3', label: 'La culture du cabinet correspond aux attentes initiales (valeurs, relation patient)' },
+          { id: 'q3_n3', label: 'La culture du centre correspond aux attentes initiales (valeurs, relation patient)' },
         ],
         questionsOuvertes: [
           { id: 'q3_o1', label: 'Qu\'est-ce qui vous a le plus aidé dans votre intégration ? Qu\'aurait-on pu faire différemment ?', placeholder: 'Retour critique et constructif sur le parcours d\'intégration global...' },
@@ -239,7 +174,7 @@ export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
         questionsNotes: [
           { id: 'q3_n4', label: 'Niveau de maîtrise des compétences cliniques attendues (consultations, interprétation PSG...)', postes: ['Médecin', 'Infirmier(e)', 'Technicien du sommeil'] },
           { id: 'q3_n5', label: 'Maîtrise des compétences administratives (facturation, planification, relation patient)', postes: ['Assistante médicale', 'Secrétaire médicale'] },
-          { id: 'q3_n6', label: 'Maîtrise de l\'ensemble des outils numériques et logiciels du cabinet' },
+          { id: 'q3_n6', label: 'Maîtrise de l\'ensemble des outils numériques et logiciels du centre' },
         ],
         questionsOuvertes: [
           { id: 'q3_o2', label: 'Y a-t-il des compétences que vous n\'avez pas encore eu l\'opportunité de développer ?', placeholder: 'Compétences non développées, domaines restant à approfondir...' },
@@ -249,7 +184,7 @@ export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
         id: 'd3_3',
         titre: 'Satisfaction & bien-être',
         questionsNotes: [
-          { id: 'q3_n7', label: 'Niveau de bien-être et d\'épanouissement professionnel au cabinet' },
+          { id: 'q3_n7', label: 'Niveau de bien-être et d\'épanouissement professionnel au centre' },
           { id: 'q3_n8', label: 'Équilibre entre charge de travail et ressources (temps, soutien, matériel)' },
           { id: 'q3_n9', label: 'Qualité des relations avec collègues et responsable' },
         ],
@@ -272,7 +207,7 @@ export const DEFAULT_QUESTIONNAIRES: QuestionnaireConfig[] = [
         id: 'd3_5',
         titre: 'Bilan final',
         questionsNotes: [
-          { id: 'q3_n12', label: 'Satisfaction globale après 6 mois au sein du cabinet' },
+          { id: 'q3_n12', label: 'Satisfaction globale après 4-6 mois au sein du centre' },
         ],
         questionsOuvertes: [
           { id: 'q3_o5', label: 'Quelles recommandations feriez-vous pour améliorer l\'intégration des futurs collaborateurs ?', placeholder: 'Propositions concrètes pour améliorer le parcours d\'intégration futur...' },

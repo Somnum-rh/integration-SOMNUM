@@ -8,7 +8,7 @@ import SomNumLogo from '@/components/SomNumLogo';
 const BILANS = [
   {
     step: '1',
-    label: 'Bilan 1 mois',
+    label: 'Post formation',
     desc: 'Accueil, prise de poste et premières impressions du collaborateur.',
     color: 'from-blue-500 to-blue-600',
     badge: 'bg-blue-100 text-blue-700',
@@ -16,15 +16,7 @@ const BILANS = [
   },
   {
     step: '2',
-    label: 'Bilan 3 mois',
-    desc: 'Montée en autonomie, formation et organisation du travail.',
-    color: 'from-indigo-500 to-indigo-600',
-    badge: 'bg-indigo-100 text-indigo-700',
-    border: 'border-indigo-100',
-  },
-  {
-    step: '3',
-    label: 'Bilan 6 mois',
+    label: 'Bilan 4-6 mois',
     desc: 'Intégration complète, compétences acquises et perspectives.',
     color: 'from-violet-500 to-violet-600',
     badge: 'bg-violet-100 text-violet-700',
@@ -80,9 +72,9 @@ export default function HomePage() {
         transition={{ ...springPresets.gentle, delay: 0.06 }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-foreground">Les 3 étapes du suivi</h2>
+          <h2 className="text-sm font-bold text-foreground">Les 2 étapes du suivi</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {BILANS.map((b, i) => (
             <motion.div
               key={i}
