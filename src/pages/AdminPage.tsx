@@ -15,7 +15,7 @@ import {
   Lock, LogOut, Save, RotateCcw, Plus, Trash2, ChevronUp, ChevronDown,
   Eye, EyeOff, Shield, Edit3, CheckCircle2, X, GripVertical, Settings,
   FileText, ClipboardList, AlertTriangle, KeyRound, BarChart2, Download, RefreshCw,
-  Users, Loader2, ChevronRight, MessageSquare, Star,
+  Users, Loader2, ChevronRight, MessageSquare, Star, Printer,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -622,6 +622,160 @@ function NiveauBadge({ avg }: { avg: number | null }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${bg}`} style={{ color }}>{label}{avg !== null ? ` (${avg.toFixed(2)})` : ''}</span>;
 }
 
+// ─── Génération PDF compte rendu ──────────────────────────────────────────────
+function generatePDF(reponse: Reponse, configs: QuestionnaireConfig[]) {
+  const cfg = configs.find(c => c.type === reponse.questionnaire)
+    ?? DEFAULT_QUESTIONNAIRES.find(c => c.type === reponse.questionnaire);
+  const avg = moyenne(reponse.notes.map(n => n.valeur));
+  const { label: niveauLbl } = niveauLabel(avg);
+
+  const noteColors: Record<number, string> = {
+    4: '#16a34a', 3: '#2563eb', 2: '#ea580c', 1: '#dc2626',
+  };
+  const noteLabels: Record<number, string> = {
+    4: 'Très satisfait(e)', 3: 'Satisfait(e)', 2: 'Peu satisfait(e)', 1: 'Pas satisfait(e)',
+  };
+
+  const domainesHTML = cfg ? cfg.domaines.map(domaine => {
+    const domNotes = domaine.questionsNotes
+      .map(q => ({ q, r: reponse.notes.find(n => n.questionId === q.id) }))
+      .filter(({ r }) => r !== undefined);
+    const domOuvertes = domaine.questionsOuvertes
+      .map(q => ({ q, r: reponse.ouvertes.find(o => o.questionId === q.id) }))
+      .filter(({ r }) => r?.texte);
+    if (domNotes.length === 0 && domOuvertes.length === 0) return '';
+
+    const notesHTML = domNotes.map(({ q, r }) => `
+      <div class="question-note">
+        <div class="question-label">${q.label}</div>
+        <div class="note-badge" style="background:${noteColors[r!.valeur] ?? '#6b7280'}">
+          ${r!.valeur}/4 — ${noteLabels[r!.valeur] ?? ''}
+        </div>
+      </div>
+    `).join('');
+
+    const ouvertesHTML = domOuvertes.map(({ q, r }) => `
+      <div class="question-ouverte">
+        <div class="question-label-open">${q.label}</div>
+        <div class="reponse-texte">« ${r!.texte} »</div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="domaine">
+        <h3 class="domaine-titre">${domaine.titre}</h3>
+        ${notesHTML}
+        ${ouvertesHTML}
+      </div>
+    `;
+  }).join('') : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Compte rendu — ${reponse.prenom} ${(reponse.nom||'').toUpperCase()}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a2e; background: #fff; }
+    .page { max-width: 780px; margin: 0 auto; padding: 32px 40px; }
+
+    /* En-tête */
+    .header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 2px solid #1e3a5f; margin-bottom: 24px; }
+    .header-left h1 { font-size: 20px; font-weight: 800; color: #1e3a5f; letter-spacing: -0.5px; }
+    .header-left p { font-size: 11px; color: #64748b; margin-top: 3px; }
+    .header-right { text-align: right; }
+    .avg-big { font-size: 36px; font-weight: 900; color: #1e3a5f; line-height: 1; }
+    .avg-label { font-size: 10px; color: #64748b; margin-top: 2px; }
+    .niveau-badge { display: inline-block; margin-top: 4px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      background: ${avg !== null && avg >= 3.5 ? '#dcfce7' : avg !== null && avg >= 3 ? '#dbeafe' : avg !== null && avg >= 2.5 ? '#ffedd5' : '#fee2e2'};
+      color: ${avg !== null && avg >= 3.5 ? '#166534' : avg !== null && avg >= 3 ? '#1d4ed8' : avg !== null && avg >= 2.5 ? '#9a3412' : '#991b1b'};
+    }
+
+    /* Fiche identité */
+    .identity { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    .identity-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
+    .identity-item .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 3px; }
+    .identity-item .val { font-size: 11px; font-weight: 600; color: #1e293b; }
+
+    /* Domaines */
+    .domaine { margin-bottom: 22px; break-inside: avoid; }
+    .domaine-titre { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #1e3a5f;
+      padding: 7px 12px; background: #f1f5f9; border-left: 3px solid #1e3a5f; border-radius: 0 6px 6px 0; margin-bottom: 10px; }
+
+    .question-note { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 7px; margin-bottom: 6px; background: #fff; }
+    .question-label { flex: 1; font-size: 10.5px; color: #334155; line-height: 1.4; }
+    .note-badge { flex-shrink: 0; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; color: #fff; white-space: nowrap; }
+
+    .question-ouverte { padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 7px; margin-bottom: 6px; }
+    .question-label-open { font-size: 10px; font-weight: 700; color: #1d4ed8; margin-bottom: 5px; line-height: 1.4; }
+    .reponse-texte { font-size: 10.5px; color: #1e293b; line-height: 1.6; font-style: italic; padding-left: 8px; border-left: 2px solid #93c5fd; }
+
+    /* Pied de page */
+    .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: center; }
+    .footer p { font-size: 9px; color: #94a3b8; }
+
+    /* Section titre */
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { padding: 20px 28px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- En-tête -->
+    <div class="header">
+      <div class="header-left">
+        <h1>Compte rendu d'intégration</h1>
+        <p>Centre de Médecine du Sommeil · Document confidentiel</p>
+      </div>
+      <div class="header-right">
+        <div class="avg-big">${avg !== null ? avg.toFixed(2) : '—'}<span style="font-size:16px;color:#94a3b8"> /4</span></div>
+        <div class="avg-label">Score global</div>
+        <div><span class="niveau-badge">${niveauLbl}</span></div>
+      </div>
+    </div>
+
+    <!-- Identité -->
+    <div class="section-title">Informations collaborateur</div>
+    <div class="identity">
+      <div class="identity-item"><div class="lbl">Nom & Prénom</div><div class="val">${reponse.prenom} ${(reponse.nom||'').toUpperCase()}</div></div>
+      <div class="identity-item"><div class="lbl">Poste</div><div class="val">${reponse.poste}</div></div>
+      <div class="identity-item"><div class="lbl">Type de bilan</div><div class="val">${reponse.questionnaire}</div></div>
+      <div class="identity-item"><div class="lbl">Date de prise de poste</div><div class="val">${reponse.datePriseDeFonction || '—'}</div></div>
+      <div class="identity-item"><div class="lbl">Date de complétion</div><div class="val">${reponse.dateCompletion || '—'}</div></div>
+      <div class="identity-item"><div class="lbl">Référent</div><div class="val">${reponse.referent || '—'}</div></div>
+    </div>
+
+    <!-- Réponses par domaine -->
+    <div class="section-title" style="margin-top:8px">Résultats détaillés</div>
+    ${domainesHTML}
+
+    <!-- Pied de page -->
+    <div class="footer">
+      <p>Centre de Médecine du Sommeil · Usage interne · Données confidentielles</p>
+      <p>Généré le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+    </div>
+  </div>
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (win) win.focus();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 // ─── Panneau de détail d'une réponse ─────────────────────────────────────────
 function noteColor(v: number) {
   if (v >= 4) return 'bg-green-500';
@@ -682,6 +836,13 @@ function DetailPanel({
                   <p className="text-[10px] text-muted-foreground">/ 4</p>
                 </div>
               )}
+              <button
+                onClick={() => generatePDF(reponse, configs)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                PDF
+              </button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
