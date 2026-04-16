@@ -240,31 +240,32 @@ export function resetQuestionnaires(): void {
 }
 
 // ─── Admin auth ───────────────────────────────────────────────────────────────
-const ADMIN_KEY = 'cabinet_sommeil_admin_auth';
-const DEFAULT_PASSWORD = 'admin1234';
+export const ADMIN_PASSWORD_KEY = 'somnum_admin_pwd';
+export const ADMIN_AUTH_KEY = 'somnum_admin_auth';
+export const DEFAULT_PASSWORD = 'admin1234';
 
 export function getAdminPassword(): string {
-  return localStorage.getItem('cabinet_sommeil_admin_pwd') || DEFAULT_PASSWORD;
+  return localStorage.getItem(ADMIN_PASSWORD_KEY) || DEFAULT_PASSWORD;
 }
 
 export function setAdminPassword(pwd: string): void {
-  localStorage.setItem('cabinet_sommeil_admin_pwd', pwd);
+  localStorage.setItem(ADMIN_PASSWORD_KEY, pwd);
 }
 
 export function isAdminAuthenticated(): boolean {
-  return localStorage.getItem(ADMIN_KEY) === 'true';
+  return localStorage.getItem(ADMIN_AUTH_KEY) === 'true';
 }
 
 export function adminLogin(password: string): boolean {
   if (password === getAdminPassword()) {
-    localStorage.setItem(ADMIN_KEY, 'true');
+    localStorage.setItem(ADMIN_AUTH_KEY, 'true');
     return true;
   }
   return false;
 }
 
 export function adminLogout(): void {
-  localStorage.removeItem(ADMIN_KEY);
+  localStorage.removeItem(ADMIN_AUTH_KEY);
 }
 
 // ─── ID generator ─────────────────────────────────────────────────────────────
@@ -333,7 +334,7 @@ export function moyenne(vals: number[]): number | null {
 export function niveauLabel(avg: number | null): { label: string; color: string } {
   if (avg === null) return { label: 'N/A', color: '#9CA3AF' };
   if (avg >= 3.5) return { label: 'Excellent', color: '#16A34A' };
-  if (avg >= 3) return { label: 'Bon', color: '#2563EB' };
-  if (avg >= 2.5) return { label: 'Moyen', color: '#D97706' };
-  return { label: 'À améliorer', color: '#DC2626' };
+  if (avg >= 3)   return { label: 'Satisfaisant', color: '#2563EB' };
+  if (avg >= 2.5) return { label: 'À améliorer', color: '#D97706' };
+  return { label: 'Insuffisant', color: '#DC2626' };
 }

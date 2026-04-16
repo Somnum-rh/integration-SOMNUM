@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = 'https://fsapkxbizettyqvkmafl.supabase.co';
+const supabaseAnonKey = 'sb_publishable_e5NS3uSwe_xYB0RUgeSSHQ_H9J6_Kfz';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -13,6 +13,8 @@ export interface DbReponse {
   date_prise_de_fonction: string | null;
   date_completion: string | null;
   referent: string | null;
+  nom: string | null;
+  prenom: string | null;
   notes: Array<{ questionId: string; valeur: number }>;
   ouvertes: Array<{ questionId: string; texte: string }>;
   created_at: string;
