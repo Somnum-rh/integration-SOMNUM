@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getLogoSrc, setLogoSrc, resetLogo, DEFAULT_LOGO } from '@/lib/logo';
 import {
   isAdminAuthenticated, adminLogin, adminLogout,
   setAdminPassword, getAdminPassword,
@@ -15,7 +16,7 @@ import {
   Lock, LogOut, Save, RotateCcw, Plus, Trash2, ChevronUp, ChevronDown,
   Eye, EyeOff, Shield, Edit3, CheckCircle2, X, GripVertical, Settings,
   FileText, ClipboardList, AlertTriangle, KeyRound, BarChart2, Download, RefreshCw,
-  Users, Loader2, ChevronRight, MessageSquare, Star, Printer,
+  Users, Loader2, ChevronRight, MessageSquare, Star, Printer, Upload, Image as ImageIcon,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -416,6 +417,92 @@ function DomaineCard({
 }
 
 // ─── Section Mot de passe ─────────────────────────────────────────────────────
+function LogoSection() {
+  const [preview, setPreview] = useState<string>(getLogoSrc());
+  const [saved, setSaved] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Veuillez sélectionner une image.'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setPreview(result);
+      setLogoSrc(result);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleReset = () => {
+    resetLogo();
+    setPreview(DEFAULT_LOGO);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <ImageIcon className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Logo de l'application</h3>
+          <p className="text-xs text-muted-foreground">Modifiez le logo affiché dans la sidebar et la page d'accueil</p>
+        </div>
+      </div>
+
+      {/* Aperçu */}
+      <div className="flex items-center gap-6 mb-5">
+        <div className="w-32 h-20 rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden p-2">
+          <img src={preview} alt="Logo actuel" className="max-h-full max-w-full object-contain" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">Logo actuel</p>
+          <p className="text-[10px] text-muted-foreground/60">PNG, JPG, SVG recommandé · Fond transparent idéal</p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          className="hidden"
+          id="logo-upload"
+        />
+        <label
+          htmlFor="logo-upload"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          Changer le logo
+        </label>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Logo par défaut
+        </button>
+        {saved && (
+          <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Enregistré !
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PwdSection() {
   const [current, setCurrent] = useState('');
   const [next1, setNext1] = useState('');
@@ -1537,6 +1624,7 @@ export default function AdminPage() {
       {activeTab === 'parametres' && (
         <div className="space-y-6">
           <PwdSection />
+          <LogoSection />
 
           {/* Récapitulatif structure */}
           <div className="bg-card border border-border rounded-2xl p-6">
