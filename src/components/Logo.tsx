@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getLogoSrc, LOGO_STORAGE_KEY } from '@/lib/logo';
+import { getCachedLogo, fetchLogo } from '@/lib/logo';
 
 interface LogoProps {
   height?: number;
@@ -7,17 +7,19 @@ interface LogoProps {
 }
 
 export default function Logo({ height = 48, className = '' }: LogoProps) {
-  const [src, setSrc] = useState<string>(getLogoSrc());
+  const [src, setSrc] = useState<string>(getCachedLogo());
 
   useEffect(() => {
-    const handler = () => setSrc(getLogoSrc());
-    window.addEventListener('somnum_logo_changed', handler);
-    window.addEventListener('storage', (e) => {
-      if (e.key === LOGO_STORAGE_KEY) handler();
-    });
-    return () => {
-      window.removeEventListener('somnum_logo_changed', handler);
+    // Charger depuis Supabase au montage
+    fetchLogo().then(setSrc).catch(() => {});
+
+    // Écouter les changements depuis l'admin
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) setSrc(detail);
     };
+    window.addEventListener('somnum_logo_changed', handler);
+    return () => window.removeEventListener('somnum_logo_changed', handler);
   }, []);
 
   return (
@@ -26,6 +28,7 @@ export default function Logo({ height = 48, className = '' }: LogoProps) {
         src={src}
         alt="SomNum - Centre de Médecine du Sommeil"
         style={{ height: `${height}px`, width: 'auto', objectFit: 'contain' }}
+        onError={(e) => { (e.target as HTMLImageElement).src = '/images/somnum-logo.png'; }}
       />
     </div>
   );

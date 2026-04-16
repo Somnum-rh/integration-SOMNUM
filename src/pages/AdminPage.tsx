@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getLogoSrc, setLogoSrc, resetLogo, DEFAULT_LOGO } from '@/lib/logo';
+import { getCachedLogo, saveLogo, resetLogo, fetchLogo, DEFAULT_LOGO } from '@/lib/logo';
 import {
   isAdminAuthenticated, adminLogin, adminLogout,
   setAdminPassword, getAdminPassword,
@@ -418,31 +418,53 @@ function DomaineCard({
 
 // ─── Section Mot de passe ─────────────────────────────────────────────────────
 function LogoSection() {
-  const [preview, setPreview] = useState<string>(getLogoSrc());
+  const [preview, setPreview] = useState<string>(getCachedLogo());
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchLogo().then(setPreview).catch(() => {});
+  }, []);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { alert('Veuillez sélectionner une image.'); return; }
+    if (!file.type.startsWith('image/')) { setError('Veuillez sélectionner une image.'); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const result = ev.target?.result as string;
       setPreview(result);
-      setLogoSrc(result);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setSaving(true);
+      setError('');
+      try {
+        await saveLogo(result);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } catch {
+        setError('Erreur lors de la sauvegarde. Réessayez.');
+      } finally {
+        setSaving(false);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleReset = () => {
-    resetLogo();
-    setPreview(DEFAULT_LOGO);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    if (inputRef.current) inputRef.current.value = '';
+  const handleReset = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await resetLogo();
+      setPreview(DEFAULT_LOGO);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setError('Erreur lors de la réinitialisation.');
+    } finally {
+      setSaving(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
   };
 
   return (
@@ -469,35 +491,30 @@ function LogoSection() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="hidden"
-          id="logo-upload"
-        />
+      <div className="flex items-center gap-3 flex-wrap">
+        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" id="logo-upload" />
         <label
           htmlFor="logo-upload"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold cursor-pointer hover:bg-primary/90 transition-colors ${saving ? 'opacity-50 pointer-events-none' : ''}`}
         >
-          <Upload className="w-3.5 h-3.5" />
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
           Changer le logo
         </label>
         <button
           type="button"
           onClick={handleReset}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Logo par défaut
         </button>
         {saved && (
           <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Enregistré !
+            <CheckCircle2 className="w-3.5 h-3.5" /> Enregistré pour tous !
           </span>
         )}
+        {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
     </div>
   );
