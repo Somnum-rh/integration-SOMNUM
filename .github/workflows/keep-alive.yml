@@ -1,0 +1,31 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 8 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping SomNum Supabase
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://fsapkxbizettyqvkmafl.supabase.co/rest/v1/reponses?select=id&limit=1" \
+            -H "apikey: sb_publishable_e5NS3uSwe_xYB0RUgeSSHQ_H9J6_Kfz" \
+            -H "Authorization: Bearer sb_publishable_e5NS3uSwe_xYB0RUgeSSHQ_H9J6_Kfz")
+          echo "SomNum Supabase → HTTP $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ SomNum OK" || echo "⚠️ SomNum status: $STATUS"
+
+      - name: Ping BecomeUs Supabase
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://cqkumhjujfgypjfsptfp.supabase.co/rest/v1/team_members?select=id&limit=1" \
+            -H "apikey: sb_publishable_ET2z2RbpQY62ATUslTAEHg_1XIjP8S2" \
+            -H "Authorization: Bearer sb_publishable_ET2z2RbpQY62ATUslTAEHg_1XIjP8S2")
+          echo "BecomeUs Supabase → HTTP $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ BecomeUs OK" || echo "⚠️ BecomeUs status: $STATUS"
+
+      - name: Résumé
+        run: echo "🏓 Ping terminé — $(date '+%d/%m/%Y %H:%M')"
